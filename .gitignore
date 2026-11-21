@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Preview & temporary renders
+.preview/
+*.tmp
+*.bak
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build & cache
+dist/
+build/
+.remotion/
+.cache/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
