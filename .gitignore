@@ -3,6 +3,7 @@ node_modules/
 
 # Preview & temporary renders
 .preview/
+*.mp4
 *.tmp
 *.bak
 *.log
@@ -22,3 +23,6 @@ build/
 .env
 .env.local
 .env.*.local
+
+# Remotion output videos
+out/
