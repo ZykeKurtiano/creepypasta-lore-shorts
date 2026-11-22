@@ -7,7 +7,7 @@ Guía maestra reutilizable para producir **YouTube Shorts verticales (1080×1920
 ## 1. Identidad Visual y Estética 2.5D
 
 - **Formato:** `1080 × 1920` px (relación de aspecto `9:16`), `30 fps`, duración objetivo `45–55 s`.
-- **Estilo:** Terror psicológico atmosférico en **2.5D** — sin dependencias de video stock ni assets raster pesados. Todo el entorno se compone por capas vectoriales SVG/CSS con paralaje en profundidad Z, niebla orgánica en movimiento, silueta vectorial animada del ente protagonista y post-procesado analógico estilo cinta VHS.
+- **Estilo:** Terror psicológico atmosférico en **2.5D** — sin dependencias de video stock. Cada escena se compone montando activos cinematográficos generados con **Fal.ai** en `public/art/` (fondos atmosféricos 9:16 y personajes/criaturas/objetos recortados en PNG transparente) sobre capas con paralaje en profundidad Z, niebla orgánica en movimiento, partículas y post-procesado analógico estilo cinta VHS en Remotion.
 - **Capas visuales obligatorias (de fondo a frente):**
   1. **Cielo / Vacío nocturno:** Gradiente radial profundo con viñeta agresiva en bordes.
   2. **Plano Z lejano (Bosque/Escenario distante):** Siluetas difuminadas con desplazamiento lento (`0.15×` de la cámara) y baja opacidad.
@@ -61,6 +61,7 @@ El proyecto sigue una arquitectura desacoplada para clonar y sustituir fácilmen
 ```text
 ├── AGENTS.md                        # Esta guía de estilo y arquitectura
 ├── public/
+│   ├── art/                         # Activos 2.5D generados con Fal.ai (fondos 9:16 + PNGs recortados)
 │   ├── narracion.mp3                # Locución principal (ElevenLabs)
 │   ├── musica_terror.mp3            # Música dark ambient (duración narración + 2s)
 │   └── sfx/
@@ -88,8 +89,9 @@ El proyecto sigue una arquitectura desacoplada para clonar y sustituir fácilmen
 
 ### Cómo adaptar esta plantilla a otra Creepypasta
 1. Reemplaza los audios en `public/` (`narracion.mp3`, `musica_terror.mp3`, `sfx/`).
-2. Actualiza `src/data/episodeConfig.ts` y `src/data/transcript.ts` con los nuevos tiempos palabra por palabra y la nueva duración total (`ceil(audioDurationSec * 30) + 45` frames).
-3. Sustituye `CharacterSilhouette.tsx` por el SVG animado del nuevo personaje y ajusta los motivos gráficos de los 4 actos en `src/scenes/`.
+2. Genera con Python + `fal_client` (`FAL_KEY`) los fondos verticales 9:16 (`fal-ai/flux/dev`) y recortes PNG transparentes (`fal-ai/flux/dev` + `fal-ai/birefnet/v2`) en `public/art/`.
+3. Actualiza `src/data/episodeConfig.ts` y `src/data/transcript.ts` con los nuevos tiempos palabra por palabra y la nueva duración total (`ceil(audioDurationSec * 30) + 45` frames).
+4. Monta cada sub-escena en `src/scenes/` en capas 2.5D independientes respetando Zonas Seguras, centrado estricto y cinematografía variada.
 
 ---
 
@@ -106,9 +108,9 @@ El proyecto sigue una arquitectura desacoplada para clonar y sustituir fácilmen
 
 ---
 
-## 6. Reglas Obligatorias de Dirección Visual, Modelos SVG y Cinematografía (Futuros Episodios)
+## 6. Reglas Obligatorias de Dirección Visual, Arte 2.5D con Fal.ai y Cinematografía (Futuros Episodios)
 
-Estas 4 reglas aplican de forma **estricta y obligatoria** para todos los futuros Shorts de creepypastas generados con esta plantilla:
+Estas 5 reglas aplican de forma **estricta y obligatoria** para todos los futuros Shorts de creepypastas generados con esta plantilla:
 
 1. **Centrado estricto de textos y subtítulos:**
    - Todos los títulos en pantalla y subtítulos dinámicos palabra por palabra deben estar **perfectamente centrados en el eje horizontal** usando:
@@ -118,20 +120,22 @@ Estas 4 reglas aplican de forma **estricta y obligatoria** para todos los futuro
 2. **Narrativa multi-escena en 2.5D (prohibido usar un solo fondo estático):**
    - Está prohibido mantener un único escenario o fondo repetitivo durante todo el video.
    - Cada vez que el guion cambie de subtema o idea, el video debe ejecutar una **transición dinámica** (corte con interferencia VHS, barrido rápido / *whip-pan* o cambio de plano) hacia un **escenario 2.5D distinto** acorde con lo narrado.
-   - Incluir **siluetas humanas viviendo la situación narrada** en cada entorno: por ejemplo, personas experimentando el suceso en el lugar, alguien escribiendo o investigando la historia frente a una computadora en penumbra, rumores y archivos propagándose en foros/redes, etc.
+   - Incluir **personajes / siluetas humanas viviendo la situación narrada** en cada entorno: por ejemplo, personas experimentando el suceso en el lugar, alguien escribiendo o investigando la historia frente a una computadora en penumbra, rumores y archivos propagándose en foros/redes, etc.
 
-3. **Modelos e ilustraciones SVG de alta complejidad anatómica y ambiental (prohibido usar primitivas simples):**
-   - Ningún personaje, criatura, mano u objeto principal puede dibujarse con menos de **15–25 elementos SVG estructurados**.
-   - Todo personaje o criatura debe incluir:
-     - Silueta orgánica construida con curvas Bézier (`<path>` complejos; **prohibido** usar rectángulos, óvalos o semicírculos rígidos).
-     - Articulaciones anatómicas claras (cuello, clavículas, hombros, codos, dedos con falanges diferenciadas).
-     - Pliegues de ropa o textura de pelaje y rasgos definidos (pupilas con brillo especular, párpados, puente nasal, encías/dentadura anatómica en lugar de triángulos simples).
-     - Al menos **3 capas de profundidad**: sombra base oscura, relleno principal con `<linearGradient>` o `<radialGradient>` y luz de borde (*rim light* sutil en el contorno para separar la figura del fondo).
-   - Todos los escenarios deben incluir **elementos secundarios detallados** (cables, reflejos en pantallas, marcos, vetas de madera, ramas múltiples en árboles, partículas atmosféricas y animaciones secundarias vivas como parpadeo sutil de monitores, neblina o movimiento de manos) para evitar fondos vacíos.
+3. **Arte e ilustraciones en capas 2.5D vía Fal.ai (`FAL_KEY`):**
+   - **Prohibido** usar dibujos vectoriales SVG simples o geométricos para personajes, criaturas, manos o fondos principales.
+   - Antes de programar las escenas en Remotion, ejecutar un script en Python usando `fal_client` (leyendo `FAL_KEY` desde las variables de entorno del sistema, nunca dentro del repositorio Git) para generar los activos visuales de cada escena en `public/art/`:
+     - **Fondos atmosféricos verticales (`9:16`):** generados con `fal-ai/flux/dev` (estilo terror psicológico, iluminación cinematográfica oscura, textura granulada, **sin texto incrustado**).
+     - **Personajes, criaturas u objetos clave:** generados con `fal-ai/flux/dev` sobre fondo liso y recortados automáticamente en **PNG transparente** mediante `fal-ai/birefnet/v2`.
+   - En Remotion, montar cada escena en **capas 2.5D separadas**: fondo lejano, niebla/partículas intermedias, personaje/criatura recortado en PNG con movimiento independiente y elementos de primer plano.
 
-4. **Cinematografía variada y prohibición de efectos periódicos (cero *shake/zoom* repetitivo):**
+4. **Alta complejidad visual cuando se usen elementos SVG auxiliares (HUD, marcos, siluetas secundarias):**
+   - Ningún elemento gráfico protagonista ni silueta/objeto principal dibujado en SVG puede construirse con primitivas rígidas simples (rectángulos, óvalos o semicírculos básicos; mínimo **15–25 elementos SVG estructurados** con curvas Bézier `<path>` orgánicas, articulaciones/rasgos anatómicos y al menos **3 capas de profundidad**: sombra base, gradiente y *rim light*).
+   - Los escenarios deben conservar riqueza de detalles secundarios (cables, reflejos en pantallas, marcos, vetas, partículas atmosféricas y animaciones secundarias vivas como parpadeo de monitores o neblina en movimiento) para evitar fondos vacíos.
+
+5. **Cinematografía variada y prohibición de efectos periódicos (cero *shake/zoom* repetitivo):**
    - Queda **estrictamente prohibido** programar bucles periódicos o temporizadores fijos (`frame % N`) que disparen sacudidas (*shake*) o pulsos de zoom cada pocos segundos a lo largo del video.
    - Cada escena debe tener **una única intención de cámara** distinta a la anterior, suave y motivada por la narrativa:
-     - *Ejemplo:* Escena 1 *dolly-in* lento y estable sin temblor; Escena 2 desplazamiento lateral (*pan*) suave; Escena 3 acercamiento progresivo en eje Z; Escena 4 leve balanceo orgánico tipo linterna en mano de baja frecuencia; Escena 5 plano fijo tenso con *push-in* gradual.
+     - *Ejemplo:* Escena 1 *dolly-in* lento y estable sin temblor; Escena 2 desplazamiento lateral (*pan*) suave; Escena 3 avance progresivo en eje Z; Escena 4 leve balanceo orgánico tipo linterna en mano de baja frecuencia; Escena 5 plano fijo tenso con *push-in* gradual.
    - Los efectos de impacto o micro-sacudida (`shake`) solo pueden usarse **1 o 2 veces en todo el Short**, exclusivamente sincronizados con un evento sonoro puntual (un susto, un golpe grave o un flash) y nunca de forma repetitiva.
 
