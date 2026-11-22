@@ -1,63 +1,48 @@
 /**
- * episodeConfig.ts — Metadatos del episodio, duración dinámica exacta
- * y límites de los 4 actos (Slenderman Lore Short).
+ * episodeConfig.ts — Smile Dog (smile.jpg) Lore & Modern Retakes
+ *
+ * Metadatos maestros de la composición:
+ * duración dinámica, FPS y límites exactos de las 5 escenas.
  */
+
+export const COMP_ID = "SmileDogLoreShort";
 
 export const FPS = 30;
 export const WIDTH = 1080;
 export const HEIGHT = 1920;
 
-/** Duración exacta de la narración (public/narracion.mp3) */
-export const NARRATION_DURATION_SEC = 53.264;
+export const NARRATION_DURATION_SEC = 51.252;
+export const MUSIC_DURATION_SEC = 53.252;
 
-/** Frames de cierre atmosférico (1.5 s) */
+/** 45 frames = 1.5 s de cierre atmosférico tras la locución. */
 export const OUTRO_HOLD_FRAMES = 45;
 
-/** 53.264s * 30fps = 1597.92 -> ceil = 1598 + 45 = 1643 frames (~54.77 s) */
+/** ceil(51.252 * 30) + 45 = 1538 + 45 = 1583 frames (~52.77 s). */
 export const TOTAL_FRAMES =
   Math.ceil(NARRATION_DURATION_SEC * FPS) + OUTRO_HOLD_FRAMES;
 
-/** Límites de los 4 actos (frames globales) */
-export const ACT1_START = 0;
-export const ACT1_END = 156; // 0.00s – 5.20s
-export const ACT2_START = 156;
-export const ACT2_END = 855; // 5.20s – 28.50s
-export const ACT3_START = 855;
-export const ACT3_END = 1386; // 28.50s – 46.20s
-export const ACT4_START = 1386;
-export const ACT4_END = TOTAL_FRAMES; // 46.20s – 54.77s
-
-export type ActNumber = 1 | 2 | 3 | 4;
-
-export const getActForFrame = (frame: number): ActNumber => {
-  if (frame < ACT2_START) {
-    return 1;
-  }
-  if (frame < ACT3_START) {
-    return 2;
-  }
-  if (frame < ACT4_START) {
-    return 3;
-  }
-  return 4;
-};
-
 /**
- * Zonas seguras de YouTube Shorts (1080x1920):
- * - Superior libre: y < 288
- * - Inferior libre: y > 1440
- * - Columna derecha de iconos: x > 918
- * - Respiro izquierdo recomendado: x < 64
- * Todo texto/UI narrativo vive dentro de SAFE (x: [64, 904], y: [300, 1200]).
+ * Límites exactos de las 5 escenas (frames globales @ 30 fps).
+ *
+ * 1. Hook — smile.jpg y el flash            : 0     – 489   (0.00s – 16.30s)
+ * 2. Lore clásico — Mary y el disquete      : 489   – 846   (16.30s – 28.20s)
+ * 3. Retake psicológico — Correos y duelo   : 846   – 1113  (28.20s – 37.10s)
+ * 4. Retake biológico — Bosque e infección  : 1113  – 1347  (37.10s – 44.90s)
+ * 5. Cierre perturbador — Close-up final    : 1347  – 1583  (44.90s – 52.77s)
  */
-export const SAFE = {
-  left: 64,
-  right: 904,
-  top: 300,
-  bottom: 1200,
+export const SCENES = {
+  scene1: { start: 0, end: 489 },
+  scene2: { start: 489, end: 846 },
+  scene3: { start: 846, end: 1113 },
+  scene4: { start: 1113, end: 1347 },
+  scene5: { start: 1347, end: TOTAL_FRAMES },
 } as const;
 
-/** Línea base de los subtítulos cinéticos (~66% de altura, sobre 1440px) */
-export const SUBTITLE_TOP = 1235;
-export const SUBTITLE_LEFT = 64;
-export const SUBTITLE_WIDTH = 840;
+/** Zona segura horizontal (YouTube Shorts): x útil [64, 918], centrado 540. */
+export const SAFE_LEFT = 64;
+export const SAFE_RIGHT = 918;
+export const SAFE_CENTER_X = 540;
+
+/** Zona segura vertical: textos/HUD solo entre y=288 y y=1440. */
+export const SAFE_TOP = 288;
+export const SAFE_BOTTOM = 1440;

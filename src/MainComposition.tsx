@@ -1,114 +1,107 @@
 import React from "react";
 import {
   AbsoluteFill,
-  Sequence,
+  Easing,
   interpolate,
+  Sequence,
   useCurrentFrame,
+  useVideoConfig,
 } from "remotion";
-import {
-  ACT1_END,
-  ACT2_END,
-  ACT2_START,
-  ACT3_END,
-  ACT3_START,
-  ACT4_END,
-  ACT4_START,
-  TOTAL_FRAMES,
-} from "./data/episodeConfig";
 import { AudioMaster } from "./components/AudioMaster";
-import { ForestParallax25D } from "./components/ForestParallax25D";
+import { Camera25D } from "./components/Camera25D";
 import { KineticSubtitles } from "./components/KineticSubtitles";
-import { VhsPostProcess, getGlitchIntensity } from "./components/VhsPostProcess";
-import { Act1Hook } from "./scenes/Act1Hook";
-import { Act2Origin } from "./scenes/Act2Origin";
-import { Act3Abilities } from "./scenes/Act3Abilities";
-import { Act4Outro } from "./scenes/Act4Outro";
+import { SceneTransitions } from "./components/SceneTransitions";
+import { VhsPostProcess } from "./components/VhsPostProcess";
+import { TOTAL_FRAMES } from "./data/episodeConfig";
+import { Scene1CrtHook } from "./scenes/Scene1CrtHook";
+import { Scene2MaryBedroom } from "./scenes/Scene2MaryBedroom";
+import { Scene3RetroEmailRetake } from "./scenes/Scene3RetroEmailRetake";
+import { Scene4BiologicalForest } from "./scenes/Scene4BiologicalForest";
+import { Scene5ChillingOutro } from "./scenes/Scene5ChillingOutro";
 
 /**
- * MainComposition.tsx — Orquestador maestro:
- * bosque 2.5D con mood por acto, las 4 escenas en <Sequence>,
- * subtítulos cinéticos, post-procesado VHS y mezcla de audio.
+ * MainComposition — Orquestador maestro.
+ *
+ * Monta las 5 escenas 2.5D en <Sequence>, envuelve cada una con la
+ * Camera25D (handheld + zoom punches), ejecuta las transiciones
+ * dinámicas entre escenas (deslizamiento whip-pan real sobre las dos
+ * escenas implicadas) y apila encima subtítulos, post-proceso VHS y
+ * la mezcla de audio.
  */
 
-const clamp = {
-  extrapolateLeft: "clamp",
-  extrapolateRight: "clamp",
-} as const;
+interface SceneSpec {
+  start: number;
+  end: number;
+  Component: React.FC;
+}
+
+const SCENE_SPECS: SceneSpec[] = [
+  { start: 0, end: 489, Component: Scene1CrtHook },
+  { start: 489, end: 846, Component: Scene2MaryBedroom },
+  { start: 846, end: 1113, Component: Scene3RetroEmailRetake },
+  { start: 1113, end: 1347, Component: Scene4BiologicalForest },
+  { start: 1347, end: TOTAL_FRAMES, Component: Scene5ChillingOutro },
+];
+
+/** Fronteras con whip-pan: duración del barrido en frames. */
+const WHIP_WINDOWS: Record<number, number> = {
+  846: 10,
+  1113: 12,
+};
 
 export const MainComposition: React.FC = () => {
   const frame = useCurrentFrame();
-
-  // Mood del bosque interpolado a lo largo de los 4 actos
-  const cameraZoom = interpolate(
-    frame,
-    [0, ACT2_START, ACT3_START, ACT4_START, TOTAL_FRAMES],
-    [0.55, 0.42, 0.62, 0.8, 1],
-    clamp
-  );
-  const fogDensity = interpolate(
-    frame,
-    [0, ACT2_START, ACT3_START, ACT4_START, TOTAL_FRAMES],
-    [0.92, 0.72, 0.86, 0.96, 1],
-    clamp
-  );
-  const redTint = interpolate(
-    frame,
-    [0, ACT2_START, ACT3_START, ACT4_START, TOTAL_FRAMES],
-    [0.05, 0.12, 0.3, 0.52, 0.66],
-    clamp
-  );
-  const cameraShake = interpolate(
-    frame,
-    [0, ACT2_START, ACT3_START, ACT4_START, TOTAL_FRAMES],
-    [0.2, 0.14, 0.34, 0.55, 0.42],
-    clamp
-  );
-
-  // Desplazamiento VHS del mundo (cuantizado) en picos de glitch
-  const g = getGlitchIntensity(frame);
-  const jx = Math.round(Math.sin(frame * 3.1) * 2.4) * 6 * g;
-  const jy = Math.round(Math.sin(frame * 2.7 + 1.1) * 1.8) * 4 * g;
+  const { width } = useVideoConfig();
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#040507" }}>
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          transform: `translate(${jx}px, ${jy}px)`,
-        }}
-      >
-        <ForestParallax25D
-          cameraZoom={cameraZoom}
-          fogDensity={fogDensity}
-          redTint={redTint}
-          cameraShake={cameraShake}
-        />
-        <Sequence from={0} durationInFrames={ACT1_END}>
-          <Act1Hook />
-        </Sequence>
-        <Sequence
-          from={ACT2_START}
-          durationInFrames={ACT2_END - ACT2_START}
-        >
-          <Act2Origin />
-        </Sequence>
-        <Sequence
-          from={ACT3_START}
-          durationInFrames={ACT3_END - ACT3_START}
-        >
-          <Act3Abilities />
-        </Sequence>
-        <Sequence
-          from={ACT4_START}
-          durationInFrames={ACT4_END - ACT4_START}
-        >
-          <Act4Outro />
-        </Sequence>
-      </div>
+      {/* Escenas con deslizamiento whip-pan real en las fronteras */}
+      {SCENE_SPECS.map(({ start, end, Component }, i) => {
+        const whipIn = WHIP_WINDOWS[start] ?? 0;
+        const whipOut = WHIP_WINDOWS[end] ?? 0;
+        if (frame < start || frame >= end + whipOut) {
+          return null;
+        }
 
+        let tx = 0;
+        if (whipIn > 0 && frame < start + whipIn) {
+          tx = interpolate(frame, [start, start + whipIn], [width, 0], {
+            easing: Easing.in(Easing.cubic),
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+          });
+        } else if (whipOut > 0 && frame >= end) {
+          tx = interpolate(frame, [end, end + whipOut], [0, -width * 0.65], {
+            easing: Easing.out(Easing.cubic),
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+          });
+        }
+
+        return (
+          <AbsoluteFill
+            key={i}
+            style={{ transform: `translateX(${tx}px)`, overflow: "hidden" }}
+          >
+            <Sequence from={start} durationInFrames={end - start + whipOut}>
+              <Camera25D sceneStart={start} sceneEnd={end}>
+                <Component />
+              </Camera25D>
+            </Sequence>
+          </AbsoluteFill>
+        );
+      })}
+
+      {/* Transiciones dinámicas entre escenas */}
+      <SceneTransitions />
+
+      {/* Subtítulos cinéticos palabra por palabra */}
       <KineticSubtitles />
+
+      {/* Post-procesado VHS + HUD */}
       <VhsPostProcess />
+
+      {/* Mezcla de audio */}
       <AudioMaster />
     </AbsoluteFill>
   );

@@ -106,9 +106,9 @@ El proyecto sigue una arquitectura desacoplada para clonar y sustituir fácilmen
 
 ---
 
-## 6. Reglas Obligatorias de Dirección Visual, Centrado y Dinamismo Multi-Escena (Futuros Episodios)
+## 6. Reglas Obligatorias de Dirección Visual, Modelos SVG y Cinematografía (Futuros Episodios)
 
-Estas 3 reglas aplican de forma **estricta y obligatoria** para todos los futuros Shorts de creepypastas generados con esta plantilla:
+Estas 4 reglas aplican de forma **estricta y obligatoria** para todos los futuros Shorts de creepypastas generados con esta plantilla:
 
 1. **Centrado estricto de textos y subtítulos:**
    - Todos los títulos en pantalla y subtítulos dinámicos palabra por palabra deben estar **perfectamente centrados en el eje horizontal** usando:
@@ -120,8 +120,18 @@ Estas 3 reglas aplican de forma **estricta y obligatoria** para todos los futuro
    - Cada vez que el guion cambie de subtema o idea, el video debe ejecutar una **transición dinámica** (corte con interferencia VHS, barrido rápido / *whip-pan* o cambio de plano) hacia un **escenario 2.5D distinto** acorde con lo narrado.
    - Incluir **siluetas humanas viviendo la situación narrada** en cada entorno: por ejemplo, personas experimentando el suceso en el lugar, alguien escribiendo o investigando la historia frente a una computadora en penumbra, rumores y archivos propagándose en foros/redes, etc.
 
-3. **Mayor dinamismo en animaciones y cámara:**
-   - Evitar planos estáticos en cualquier acto.
-   - Mantener **movimiento continuo de cámara en 2.5D**: balanceo suave tipo cámara en mano y golpes de zoom con `spring()` sincronizados con palabras clave o revelaciones del guion.
-   - Acompañar cada escena con **animaciones secundarias vivas**: parpadeo de luces o monitores, movimiento de manos/cuerpos en siluetas, partículas flotantes, neblina orgánica en desplazamiento y efectos ambientales acordes al momento narrativo.
+3. **Modelos e ilustraciones SVG de alta complejidad anatómica y ambiental (prohibido usar primitivas simples):**
+   - Ningún personaje, criatura, mano u objeto principal puede dibujarse con menos de **15–25 elementos SVG estructurados**.
+   - Todo personaje o criatura debe incluir:
+     - Silueta orgánica construida con curvas Bézier (`<path>` complejos; **prohibido** usar rectángulos, óvalos o semicírculos rígidos).
+     - Articulaciones anatómicas claras (cuello, clavículas, hombros, codos, dedos con falanges diferenciadas).
+     - Pliegues de ropa o textura de pelaje y rasgos definidos (pupilas con brillo especular, párpados, puente nasal, encías/dentadura anatómica en lugar de triángulos simples).
+     - Al menos **3 capas de profundidad**: sombra base oscura, relleno principal con `<linearGradient>` o `<radialGradient>` y luz de borde (*rim light* sutil en el contorno para separar la figura del fondo).
+   - Todos los escenarios deben incluir **elementos secundarios detallados** (cables, reflejos en pantallas, marcos, vetas de madera, ramas múltiples en árboles, partículas atmosféricas y animaciones secundarias vivas como parpadeo sutil de monitores, neblina o movimiento de manos) para evitar fondos vacíos.
+
+4. **Cinematografía variada y prohibición de efectos periódicos (cero *shake/zoom* repetitivo):**
+   - Queda **estrictamente prohibido** programar bucles periódicos o temporizadores fijos (`frame % N`) que disparen sacudidas (*shake*) o pulsos de zoom cada pocos segundos a lo largo del video.
+   - Cada escena debe tener **una única intención de cámara** distinta a la anterior, suave y motivada por la narrativa:
+     - *Ejemplo:* Escena 1 *dolly-in* lento y estable sin temblor; Escena 2 desplazamiento lateral (*pan*) suave; Escena 3 acercamiento progresivo en eje Z; Escena 4 leve balanceo orgánico tipo linterna en mano de baja frecuencia; Escena 5 plano fijo tenso con *push-in* gradual.
+   - Los efectos de impacto o micro-sacudida (`shake`) solo pueden usarse **1 o 2 veces en todo el Short**, exclusivamente sincronizados con un evento sonoro puntual (un susto, un golpe grave o un flash) y nunca de forma repetitiva.
 
