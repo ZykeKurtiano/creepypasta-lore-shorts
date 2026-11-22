@@ -8,25 +8,27 @@ import {
   useVideoConfig,
 } from "remotion";
 import { AudioMaster } from "./components/AudioMaster";
-import { Camera25D } from "./components/Camera25D";
 import { KineticSubtitles } from "./components/KineticSubtitles";
 import { SceneTransitions } from "./components/SceneTransitions";
 import { VhsPostProcess } from "./components/VhsPostProcess";
-import { TOTAL_FRAMES } from "./data/episodeConfig";
-import { Scene1CrtHook } from "./scenes/Scene1CrtHook";
-import { Scene2MaryBedroom } from "./scenes/Scene2MaryBedroom";
-import { Scene3RetroEmailRetake } from "./scenes/Scene3RetroEmailRetake";
-import { Scene4BiologicalForest } from "./scenes/Scene4BiologicalForest";
-import { Scene5ChillingOutro } from "./scenes/Scene5ChillingOutro";
+import { SCENES } from "./data/episodeConfig";
+import { JeffScene1Mirror } from "./scenes/JeffScene1Mirror";
+import { JeffScene2Arena } from "./scenes/JeffScene2Arena";
+import { JeffScene3Retakes } from "./scenes/JeffScene3Retakes";
+import { JeffScene4Faceoff } from "./scenes/JeffScene4Faceoff";
 
 /**
- * MainComposition — Orquestador maestro.
+ * MainComposition — Orquestador maestro de JeffTheKillerLoreShort.
  *
- * Monta las 5 escenas 2.5D en <Sequence>, envuelve cada una con la
- * Camera25D (handheld + zoom punches), ejecuta las transiciones
- * dinámicas entre escenas (deslizamiento whip-pan real sobre las dos
- * escenas implicadas) y apila encima subtítulos, post-proceso VHS y
- * la mezcla de audio.
+ * Monta las 4 escenas 2.5D en <Sequence>, cada una con su propia intención
+ * de cámara suave y sin bucles periódicos de shake o zoom:
+ *  1. JeffScene1Mirror  (dolly-in lento y estable)
+ *  2. JeffScene2Arena   (pan lateral suave)
+ *  3. JeffScene3Retakes (avance progresivo lento en eje Z)
+ *  4. JeffScene4Faceoff (corte con deep_boom único + plano fijo tenso)
+ *
+ * Aplica deslizamiento whip-pan real en el barrido rápido Escena 2 → 3
+ * y apila encima transiciones, subtítulos cinéticos, post-procesado VHS y audio.
  */
 
 interface SceneSpec {
@@ -36,17 +38,15 @@ interface SceneSpec {
 }
 
 const SCENE_SPECS: SceneSpec[] = [
-  { start: 0, end: 489, Component: Scene1CrtHook },
-  { start: 489, end: 846, Component: Scene2MaryBedroom },
-  { start: 846, end: 1113, Component: Scene3RetroEmailRetake },
-  { start: 1113, end: 1347, Component: Scene4BiologicalForest },
-  { start: 1347, end: TOTAL_FRAMES, Component: Scene5ChillingOutro },
+  { ...SCENES.scene1, Component: JeffScene1Mirror },
+  { ...SCENES.scene2, Component: JeffScene2Arena },
+  { ...SCENES.scene3, Component: JeffScene3Retakes },
+  { ...SCENES.scene4, Component: JeffScene4Faceoff },
 ];
 
-/** Fronteras con whip-pan: duración del barrido en frames. */
+/** Frontera con barrido rápido (whip-pan): Escena 2 → 3 (10 frames). */
 const WHIP_WINDOWS: Record<number, number> = {
-  846: 10,
-  1113: 12,
+  [SCENES.scene3.start]: 10,
 };
 
 export const MainComposition: React.FC = () => {
@@ -55,7 +55,6 @@ export const MainComposition: React.FC = () => {
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#040507" }}>
-      {/* Escenas con deslizamiento whip-pan real en las fronteras */}
       {SCENE_SPECS.map(({ start, end, Component }, i) => {
         const whipIn = WHIP_WINDOWS[start] ?? 0;
         const whipOut = WHIP_WINDOWS[end] ?? 0;
@@ -84,24 +83,22 @@ export const MainComposition: React.FC = () => {
             style={{ transform: `translateX(${tx}px)`, overflow: "hidden" }}
           >
             <Sequence from={start} durationInFrames={end - start + whipOut}>
-              <Camera25D sceneStart={start} sceneEnd={end}>
-                <Component />
-              </Camera25D>
+              <Component />
             </Sequence>
           </AbsoluteFill>
         );
       })}
 
-      {/* Transiciones dinámicas entre escenas */}
+      {/* Transiciones entre escenas (VHS, whip-pan y corte subgrave) */}
       <SceneTransitions />
 
-      {/* Subtítulos cinéticos palabra por palabra */}
+      {/* Subtítulos cinéticos palabra por palabra dentro de zona segura */}
       <KineticSubtitles />
 
       {/* Post-procesado VHS + HUD */}
       <VhsPostProcess />
 
-      {/* Mezcla de audio */}
+      {/* Mezcla de audio con ducking + SFX */}
       <AudioMaster />
     </AbsoluteFill>
   );

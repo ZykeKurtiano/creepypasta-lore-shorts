@@ -1,22 +1,31 @@
 import React from "react";
 import { Audio, interpolate, Sequence, staticFile } from "remotion";
 import { TRANSCRIPT_WORDS } from "../data/transcript";
-import { FPS, NARRATION_DURATION_SEC, TOTAL_FRAMES } from "../data/episodeConfig";
+import {
+  FPS,
+  NARRATION_DURATION_SEC,
+  SCENES,
+  TOTAL_FRAMES,
+} from "../data/episodeConfig";
 
 /**
- * AudioMaster — Mezcla de audio del episodio:
- *  - narracion.mp3 al volumen 1.0 constante,
- *  - musica_terror.mp3 con ducking: 0.12 con voz activa, subida suave a
- *    0.35 en pausas (>= 0.40s) y en el cierre final (frames 1526–1583),
- *    con fundido limpio a 0.0 en los últimos 18 frames (1565–1583),
- *  - SFX con <Sequence> + <Audio> en cortes e impactos.
+ * AudioMaster — Mezcla maestra de audio para Jeff the Killer:
+ *  - narracion.mp3 a volumen 1.0 constante,
+ *  - musica_terror.mp3 con Audio Ducking suave:
+ *      · 0.12 durante voz activa,
+ *      · 0.35 en pausas dramáticas (>= 0.40 s) y en el cierre final,
+ *      · fundido limpio a 0.0 en los últimos 20 frames,
+ *  - SFX sincronizados con <Sequence> + <Audio>:
+ *      · knife_scrape.mp3 en "‘ve a dormir’" y en el acecho del dormitorio,
+ *      · vhs_glitch.mp3 en las transiciones VHS (Escena 1→2 y 2→3),
+ *      · deep_boom.mp3 como golpe subgrave único al cortar a la Escena 4.
  */
 
 const MUSIC_VOICE = 0.12;
 const MUSIC_PAUSE = 0.35;
 const MIN_PAUSE_SEC = 0.4;
-const FINAL_FADE_START = 1565;
-const FINAL_FADE_END = 1583;
+const FINAL_FADE_START = TOTAL_FRAMES - 20;
+const FINAL_FADE_END = TOTAL_FRAMES;
 
 const LAST_WORD_END = TRANSCRIPT_WORDS.reduce(
   (max, w) => Math.max(max, w.end),
@@ -24,19 +33,16 @@ const LAST_WORD_END = TRANSCRIPT_WORDS.reduce(
 );
 
 function rawTargetAt(t: number): number {
-  // ¿Voz activa en este instante?
   for (const w of TRANSCRIPT_WORDS) {
     if (t >= w.start && t < w.end) {
       return MUSIC_VOICE;
     }
   }
 
-  // Cierre final: tras la última palabra, sostener el nivel de pausa.
   if (t >= LAST_WORD_END) {
     return MUSIC_PAUSE;
   }
 
-  // Localizar el hueco de silencio actual.
   let gapStart = 0;
   let gapEnd = NARRATION_DURATION_SEC;
   for (const w of TRANSCRIPT_WORDS) {
@@ -53,14 +59,12 @@ function rawTargetAt(t: number): number {
     return MUSIC_VOICE;
   }
 
-  // Rampas suaves de entrada/salida de la pausa (0.35 s cada una).
-  const into = Math.min(1, (t - gapStart) / 0.35);
-  const out = Math.min(1, (gapEnd - t) / 0.35);
+  const into = Math.min(1, (t - gapStart) / 0.32);
+  const out = Math.min(1, (gapEnd - t) / 0.32);
   const k = Math.max(0, Math.min(into, out));
   return MUSIC_VOICE + (MUSIC_PAUSE - MUSIC_VOICE) * k;
 }
 
-// Objetivos suavizados (media móvil ±3 frames → ataque/relajación ~0.2 s).
 const SMOOTHED_TARGETS: number[] = (() => {
   const raw: number[] = [];
   for (let f = 0; f <= TOTAL_FRAMES; f++) {
@@ -80,10 +84,6 @@ const SMOOTHED_TARGETS: number[] = (() => {
   return out;
 })();
 
-/**
- * Volumen de la música para un frame dado.
- * Ducking 0.12 (voz) ↔ 0.35 (pausas y cierre), fundido final a 0.0.
- */
 export const computeDuckedMusicVolume = (
   frame: number,
   fps: number = FPS
@@ -96,11 +96,10 @@ export const computeDuckedMusicVolume = (
     vol = rawTargetAt(f / fps);
   }
   if (f >= FINAL_FADE_START) {
-    vol *=
-      interpolate(f, [FINAL_FADE_START, FINAL_FADE_END], [1, 0], {
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp",
-      });
+    vol *= interpolate(f, [FINAL_FADE_START, FINAL_FADE_END], [1, 0], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+    });
   }
   return Math.max(0, vol);
 };
@@ -111,43 +110,31 @@ export const AudioMaster: React.FC = () => {
       {/* Locución principal */}
       <Audio src={staticFile("narracion.mp3")} volume={1.0} />
 
-      {/* Música dark ambient con ducking */}
+      {/* Música dark ambient con ducking automático */}
       <Audio
         src={staticFile("musica_terror.mp3")}
         volume={(f) => computeDuckedMusicVolume(f)}
       />
 
-      {/* SFX: flash de cámara */}
-      <Sequence from={136}>
-        <Audio src={staticFile("sfx/camera_flash.mp3")} volume={0.58} />
+      {/* SFX: roce metálico sutil en "‘ve a dormir’" y acecho en dormitorio */}
+      <Sequence from={34} durationInFrames={50}>
+        <Audio src={staticFile("sfx/knife_scrape.mp3")} volume={0.44} />
       </Sequence>
-      <Sequence from={258}>
-        <Audio src={staticFile("sfx/camera_flash.mp3")} volume={0.38} />
-      </Sequence>
-      <Sequence from={1346}>
-        <Audio src={staticFile("sfx/camera_flash.mp3")} volume={0.48} />
+      <Sequence from={1028} durationInFrames={50}>
+        <Audio src={staticFile("sfx/knife_scrape.mp3")} volume={0.28} />
       </Sequence>
 
-      {/* SFX: estática VHS en cortes de acto */}
-      <Sequence from={486}>
-        <Audio src={staticFile("sfx/vhs_glitch.mp3")} volume={0.42} />
+      {/* SFX: interferencia VHS en corte Escena 1 → 2 y barrido Escena 2 → 3 */}
+      <Sequence from={SCENES.scene2.start - 2} durationInFrames={40}>
+        <Audio src={staticFile("sfx/vhs_glitch.mp3")} volume={0.46} />
       </Sequence>
-      <Sequence from={844}>
-        <Audio src={staticFile("sfx/vhs_glitch.mp3")} volume={0.36} />
-      </Sequence>
-      <Sequence from={1110}>
-        <Audio src={staticFile("sfx/vhs_glitch.mp3")} volume={0.42} />
+      <Sequence from={SCENES.scene3.start - 2} durationInFrames={40}>
+        <Audio src={staticFile("sfx/vhs_glitch.mp3")} volume={0.34} />
       </Sequence>
 
-      {/* SFX: golpe subgrave en revelaciones clave */}
-      <Sequence from={422}>
-        <Audio src={staticFile("sfx/deep_growl_boom.mp3")} volume={0.45} />
-      </Sequence>
-      <Sequence from={1272}>
-        <Audio src={staticFile("sfx/deep_growl_boom.mp3")} volume={0.58} />
-      </Sequence>
-      <Sequence from={1462}>
-        <Audio src={staticFile("sfx/deep_growl_boom.mp3")} volume={0.62} />
+      {/* SFX: único golpe subgrave al cortar al cara a cara final (Escena 4) */}
+      <Sequence from={SCENES.scene4.start - 1} durationInFrames={80}>
+        <Audio src={staticFile("sfx/deep_boom.mp3")} volume={0.68} />
       </Sequence>
     </>
   );
