@@ -49,7 +49,7 @@ Sobre un lienzo de **`1080 × 1920` px**, la interfaz móvil de YouTube Shorts c
 | **Respiro izquierdo recomendado** | `6%` izquierdo | `x: 0px – 64px` | Seguridad de bordes curvos en móviles |
 
 - **Caja Segura Activa:** `x: [64px, 918px]` (`ancho útil = 854px`), `y: [288px, 1440px]` (`alto útil = 1152px`).
-- **Posición de Subtítulos Cinéticos:** A **`~66%` de altura** (`y ≈ 1240px–1300px`), siempre por encima de `1440px`, con ancho máximo contenido dentro de `x: [64px, 900px]` para no chocar jamás con la columna derecha de iconos.
+- **Posición de Subtítulos Cinéticos:** A **`~66%` de altura** (`y ≈ 1240px–1300px`), siempre por encima de `1440px`, perfectamente centrados en el eje horizontal (`left: 0`, `right: 0`, `width: '100%'`, `display: 'flex'`, `justifyContent: 'center'`, `textAlign: 'center'`) con márgenes laterales seguros (`paddingInline: 90px`) para no chocar jamás con la columna derecha de iconos.
 - **Elementos de fondo (bosque, niebla, grano VHS, viñeta):** Sí ocupan el `100%` del lienzo `1080×1920` a sangre completa.
 
 ---
@@ -103,3 +103,25 @@ El proyecto sigue una arquitectura desacoplada para clonar y sustituir fácilmen
 - **Animación 100% determinista:** Todas las animaciones deben derivar exclusivamente de `useCurrentFrame()`, `useVideoConfig()`, `interpolate()`, `spring()` y `random(seed)` de Remotion. Prohibido usar `Math.random()`, `setTimeout` o transiciones CSS no sincronizadas.
 - **Rutas con espacios (Windows):** Encerrar siempre las rutas entre comillas dobles en comandos CLI (`"C:\Creepypastas IA\video-slenderman"`).
 - **Verificación visual obligatoria:** Antes de renderizar el MP4 final, exportar 4 capturas PNG con `npx remotion still` (una por acto) en `.preview/` y auditar zonas seguras, contraste tipográfico y estética 2.5D.
+
+---
+
+## 6. Reglas Obligatorias de Dirección Visual, Centrado y Dinamismo Multi-Escena (Futuros Episodios)
+
+Estas 3 reglas aplican de forma **estricta y obligatoria** para todos los futuros Shorts de creepypastas generados con esta plantilla:
+
+1. **Centrado estricto de textos y subtítulos:**
+   - Todos los títulos en pantalla y subtítulos dinámicos palabra por palabra deben estar **perfectamente centrados en el eje horizontal** usando:
+     - `left: 0`, `right: 0`, `width: '100%'`, `display: 'flex'`, `justifyContent: 'center'`, `textAlign: 'center'`
+   - Mantener siempre márgenes laterales seguros (`paddingInline: 90px`) para evitar que cualquier texto o píldora de subtítulo choque con la columna derecha de iconos de YouTube Shorts o los bordes del lienzo.
+
+2. **Narrativa multi-escena en 2.5D (prohibido usar un solo fondo estático):**
+   - Está prohibido mantener un único escenario o fondo repetitivo durante todo el video.
+   - Cada vez que el guion cambie de subtema o idea, el video debe ejecutar una **transición dinámica** (corte con interferencia VHS, barrido rápido / *whip-pan* o cambio de plano) hacia un **escenario 2.5D distinto** acorde con lo narrado.
+   - Incluir **siluetas humanas viviendo la situación narrada** en cada entorno: por ejemplo, personas experimentando el suceso en el lugar, alguien escribiendo o investigando la historia frente a una computadora en penumbra, rumores y archivos propagándose en foros/redes, etc.
+
+3. **Mayor dinamismo en animaciones y cámara:**
+   - Evitar planos estáticos en cualquier acto.
+   - Mantener **movimiento continuo de cámara en 2.5D**: balanceo suave tipo cámara en mano y golpes de zoom con `spring()` sincronizados con palabras clave o revelaciones del guion.
+   - Acompañar cada escena con **animaciones secundarias vivas**: parpadeo de luces o monitores, movimiento de manos/cuerpos en siluetas, partículas flotantes, neblina orgánica en desplazamiento y efectos ambientales acordes al momento narrativo.
+
