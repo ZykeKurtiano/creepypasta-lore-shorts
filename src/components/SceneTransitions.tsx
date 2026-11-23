@@ -1,318 +1,309 @@
-import React, { useEffect, useRef } from "react";
-import {
-  AbsoluteFill,
-  interpolate,
-  random,
-  useCurrentFrame,
-} from "remotion";
-import { flashEnvelope } from "./Camera25D";
+import React from "react";
+import { AbsoluteFill, interpolate, useCurrentFrame } from "remotion";
+import { SCENES } from "../data/episodeConfig";
 
 /**
- * SceneTransitions — Transiciones dinámicas entre escenas (frames globales):
- *  - frame 138 y 260: estallido de flash de cámara vintage + postimagen fría
- *    con división cromática.
- *  - frame 489: desgarro de tracking VHS + ráfaga de estática (12 frames).
- *  - frame 846: barrido horizontal whip-pan (streak de motion blur, 10 frames;
- *    el deslizamiento translateX real lo aplica MainComposition).
- *  - frame 1113: whip-pan + interferencia VHS (12 frames).
- *  - frame 1347: apagón duro / destello carmesí hacia el close-up final.
+ * SceneTransitions — 5 transiciones continuas de BEN Drowned (globales),
+ * estilo Kurzgesagt oscuro. PROHIBIDO: apagones en negro seco o
+ * destellos de flash fotográfico.
+ *
+ *  - scene2.start ( 590): Zoom-Through CRT — anillos de fósforo
+ *    verde/cian + breve destello de tubo catódico (Escena 1 → 2).
+ *  - scene3.start (1248): Inmersión Z-Dive + Divisor — velo de
+ *    espuma/burbujas abisales despejado por el divisor deslizante
+ *    (Escena 2 → 3).
+ *  - scene4.start (1892): Spotlight → Divisor Arquitectónico — cierre
+ *    de cono de luz oscuro + borde de pared barriendo (Escena 3 → 4).
+ *  - scene5.start (2188): Zoom-Through Puerta del Baño — viñeta de
+ *    marco de puerta abriéndose hacia la luz fría (Escena 4 → 5).
+ *  - scene6.start (2521): Barrido Dividido Diagonal — línea diagonal
+ *    luminosa verde/cian + ráfaga breve de estática y agua (Escena 5 → 6).
  */
 
-const TearStatic: React.FC<{ opacity: number }> = ({ opacity }) => {
-  const frame = useCurrentFrame();
-  const ref = useRef<HTMLCanvasElement | null>(null);
-
-  useEffect(() => {
-    const canvas = ref.current;
-    if (!canvas) {
-      return;
-    }
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      return;
-    }
-    const w = 96;
-    const h = 160;
-    const img = ctx.createImageData(w, h);
-    const tearY = 50 + Math.round((frame * 13) % 90);
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const g = random(frame * 77 + y * w + x);
-        const v = g > 0.5 ? 235 : 18;
-        const shift =
-          y > tearY ? Math.round((random(frame * 3 + y * 5) - 0.5) * 16) : 0;
-        const sx = (x + shift + w) % w;
-        const idx = (y * w + sx) * 4;
-        img.data[idx] = v;
-        img.data[idx + 1] = v;
-        img.data[idx + 2] = v;
-        img.data[idx + 3] = g > 0.5 ? 210 : 95;
-      }
-    }
-    ctx.putImageData(img, 0, 0);
-  }, [frame]);
-
-  return (
-    <canvas
-      ref={ref}
-      width={96}
-      height={160}
-      style={{
-        position: "absolute",
-        inset: 0,
-        width: "100%",
-        height: "100%",
-        imageRendering: "pixelated",
-        opacity,
-        mixBlendMode: "screen",
-      }}
-    />
-  );
-};
-
-const WhipStreak: React.FC<{ from: number; len: number; opacity: number }> = ({
-  from,
-  len,
-  opacity,
-}) => {
-  const frame = useCurrentFrame();
-  const bars = [0, 1, 2, 3, 4, 5, 6];
-  return (
-    <AbsoluteFill style={{ overflow: "hidden" }}>
-      {bars.map((k) => {
-        const x = interpolate(
-          frame,
-          [from, from + len],
-          [-240 + k * 96, 1080 + k * 46],
-          { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-        );
-        return (
-          <div
-            key={k}
-            style={{
-              position: "absolute",
-              top: -60,
-              left: x,
-              width: 66 + k * 26,
-              height: 2040,
-              background:
-                "linear-gradient(90deg, transparent, rgba(214,238,255,0.16), transparent)",
-              filter: "blur(6px)",
-              opacity,
-            }}
-          />
-        );
-      })}
-      {/* Borde luminoso del barrido */}
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          left: interpolate(frame, [from, from + len], [-60, 1120], {
-            extrapolateLeft: "clamp",
-            extrapolateRight: "clamp",
-          }),
-          width: 5,
-          height: 1920,
-          background:
-            "linear-gradient(180deg, transparent, rgba(240,248,255,0.9), transparent)",
-          filter: "blur(1px)",
-          opacity: opacity * 0.9,
-        }}
-      />
-      {/* Oscurecimiento direccional */}
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          background:
-            "linear-gradient(90deg, rgba(2,3,5,0.5), transparent 35%, transparent 65%, rgba(2,3,5,0.5))",
-          opacity,
-        }}
-      />
-    </AbsoluteFill>
-  );
-};
+const T2 = SCENES.scene2.start; // 590
+const T3 = SCENES.scene3.start; // 1248
+const T4 = SCENES.scene4.start; // 1892
+const T5 = SCENES.scene5.start; // 2188
+const T6 = SCENES.scene6.start; // 2521
 
 export const SceneTransitions: React.FC = () => {
   const frame = useCurrentFrame();
 
-  // --- Destellos de cámara dentro de la escena 1 ---
-  const flash1 = flashEnvelope(frame, 138, 24, 1);
-  const flash1After =
-    frame >= 144 && frame <= 185
-      ? interpolate(frame, [144, 185], [0.26, 0])
-      : 0;
-  const flash2 = flashEnvelope(frame, 260, 17, 0.6);
-  const flash2After =
-    frame >= 266 && frame <= 296
-      ? interpolate(frame, [266, 296], [0.16, 0])
-      : 0;
-  const coldAfter = Math.max(flash1After, flash2After);
+  // ---- T2: Zoom-Through CRT (anillos de fósforo + destello de tubo) ----
+  const t2Active = frame >= T2 && frame <= T2 + 26;
+  const ringEnv = t2Active
+    ? interpolate(frame, [T2, T2 + 6, T2 + 22], [0, 0.85, 0], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      })
+    : 0;
+  const tubeFlash = t2Active
+    ? interpolate(frame, [T2, T2 + 4, T2 + 14], [0, 0.5, 0], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      })
+    : 0;
+  const t2Scan = t2Active
+    ? interpolate(frame, [T2, T2 + 16], [0.32, 0], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      })
+    : 0;
 
-  // --- Desgarro VHS (Scene 1 → 2) ---
-  const tear489 = interpolate(frame, [487, 489, 495, 497], [0, 1, 1, 0], {
+  // ---- T3: Z-Dive + Divisor (velo abisal despejado por el divisor) ----
+  const t3Active = frame >= T3 && frame <= T3 + 26;
+  const veilOp = t3Active
+    ? interpolate(frame, [T3, T3 + 8, T3 + 22], [0.9, 0.5, 0], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      })
+    : 0;
+  const edgeX = interpolate(frame, [T3, T3 + 26], [-140, 1220], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
+  const edgeOp = t3Active
+    ? interpolate(frame, [T3, T3 + 4, T3 + 18, T3 + 26], [0, 0.95, 0.5, 0], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      })
+    : 0;
 
-  // --- Whip-pan (Scene 2 → 3) ---
-  const whip846 = interpolate(frame, [846, 850, 854, 856], [0, 0.95, 0.5, 0], {
+  // ---- T4: Spotlight → Divisor (cierre de cono oscuro + borde de pared) ----
+  const t4Active = frame >= T4 && frame <= T4 + 26;
+  const darkClose = t4Active
+    ? interpolate(frame, [T4, T4 + 14], [0, 0.78], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      })
+    : 0;
+  const wallX = interpolate(frame, [T4 + 2, T4 + 26], [1180, -180], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
+  const wallOp = t4Active
+    ? interpolate(frame, [T4 + 2, T4 + 8, T4 + 24], [0, 0.9, 0], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      })
+    : 0;
 
-  // --- Whip-pan + glitch (Scene 3 → 4) ---
-  const whip1113 = interpolate(
-    frame,
-    [1113, 1117, 1121, 1125],
-    [0, 0.9, 0.55, 0],
-    {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-    }
-  );
-  const tear1113 = interpolate(frame, [1111, 1113, 1119, 1121], [0, 1, 1, 0], {
+  // ---- T5: Zoom-Through Puerta del Baño (marco abriéndose a la luz fría) ----
+  const t5Active = frame >= T5 && frame <= T5 + 26;
+  const frameThick = t5Active
+    ? interpolate(frame, [T5, T5 + 20], [560, 60], {
+        easing: (n: number) => 1 - Math.pow(1 - n, 3),
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      })
+    : 0;
+  const coldLight = t5Active
+    ? interpolate(frame, [T5, T5 + 8, T5 + 24], [0, 0.5, 0.12], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      })
+    : 0;
+
+  // ---- T6: Barrido Dividido Diagonal (línea luminosa + estática/agua) ----
+  const t6Active = frame >= T6 && frame <= T6 + 22;
+  const diagX = interpolate(frame, [T6, T6 + 22], [-1560, 1560], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-
-  // --- Apagón duro / destello carmesí (Scene 4 → 5) ---
-  // (Guardas de rango explícitas: extrapolateLeft clamp filtraría estos
-  // valores sobre TODOS los frames anteriores.)
-  const black =
-    frame >= 1346 && frame <= 1352
-      ? interpolate(frame, [1346, 1348, 1352], [1, 0.7, 0])
-      : 0;
-  const whiteSnap =
-    frame >= 1347 && frame <= 1349
-      ? interpolate(frame, [1347, 1348, 1349], [0.75, 1, 0])
-      : 0;
-  const crimson =
-    frame >= 1348 && frame <= 1355
-      ? interpolate(frame, [1348, 1351, 1355], [0.85, 0.4, 0])
-      : 0;
-
-  const flashTotal = Math.max(flash1, flash2) + flash1After * 0.5;
+  const diagOp = t6Active
+    ? interpolate(frame, [T6, T6 + 4, T6 + 14, T6 + 22], [0, 1, 0.55, 0], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      })
+    : 0;
+  const staticOp = t6Active
+    ? interpolate(frame, [T6, T6 + 8, T6 + 18], [0, 0.45, 0], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      })
+    : 0;
+  const waterBurst = t6Active
+    ? interpolate(frame, [T6, T6 + 10], [0, 0.5], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      })
+    : 0;
 
   return (
     <AbsoluteFill style={{ zIndex: 20, pointerEvents: "none" }}>
-      {/* Flash cámara 1 (smile.jpg) */}
-      {flash1 > 0.004 ? (
-        <AbsoluteFill style={{ background: "#F7FAFD", opacity: flash1 }} />
-      ) : null}
-      {/* Flash cámara 2 (flash) */}
-      {flash2 > 0.004 ? (
-        <AbsoluteFill style={{ background: "#EDF2F8", opacity: flash2 }} />
-      ) : null}
-      {/* Postimagen fría + división cromática */}
-      {coldAfter > 0.004 ? (
+      {/* ============ T2 (590): anillos de fósforo CRT + destello de tubo ============ */}
+      {t2Active && (
+        <AbsoluteFill>
+          <svg viewBox="0 0 1080 1920" width="100%" height="100%">
+            {[0, 1, 2].map((i) => {
+              const r = interpolate(frame, [T2 + i * 4, T2 + 22 + i * 4], [50, 1500], {
+                extrapolateLeft: "clamp",
+                extrapolateRight: "clamp",
+              });
+              return (
+                <circle
+                  key={i}
+                  cx="780"
+                  cy="990"
+                  r={r}
+                  fill="none"
+                  stroke={i % 2 === 0 ? "#22C55E" : "#22D3EE"}
+                  strokeWidth={10 - i * 3}
+                  opacity={ringEnv * (0.9 - i * 0.25)}
+                />
+              );
+            })}
+          </svg>
+          <AbsoluteFill
+            style={{
+              background:
+                "radial-gradient(circle at 780px 990px, rgba(34,197,94,0.9) 0%, rgba(34,211,238,0.4) 34%, rgba(4,5,7,0.9) 100%)",
+              opacity: tubeFlash,
+              mixBlendMode: "screen",
+            }}
+          />
+          <AbsoluteFill
+            style={{
+              background:
+                "repeating-linear-gradient(0deg, rgba(0,0,0,0.6) 0px, rgba(0,0,0,0.6) 1px, transparent 1px, transparent 3px)",
+              opacity: t2Scan,
+            }}
+          />
+        </AbsoluteFill>
+      )}
+
+      {/* ============ T3 (1248): velo abisal + divisor deslizante ============ */}
+      {t3Active && (
         <AbsoluteFill>
           <AbsoluteFill
-            style={{ background: "#B9D4EC", opacity: coldAfter }}
-          />
-          <div
             style={{
-              position: "absolute",
-              top: 0,
-              bottom: 0,
-              left: 0,
-              width: 44,
-              background: "rgba(34,211,238,0.5)",
-              opacity: coldAfter,
+              background: "linear-gradient(180deg, #04121F 0%, #072B40 60%, #0A2434 100%)",
+              opacity: veilOp,
             }}
           />
+          <svg viewBox="0 0 1080 1920" width="100%" height="100%" opacity={veilOp}>
+            {Array.from({ length: 8 }, (_, i) => {
+              const t = ((frame * 1.7 + i * 61) % 300) / 300;
+              return (
+                <circle
+                  key={i}
+                  cx={160 + i * 110 + Math.sin(frame * 0.05 + i) * 20}
+                  cy={1900 - t * 2000}
+                  r={2.5 + (i % 3) * 2}
+                  fill="none"
+                  stroke="#22D3EE"
+                  strokeWidth="1.4"
+                  opacity={0.3 + 0.3 * Math.sin(t * Math.PI)}
+                />
+              );
+            })}
+          </svg>
+          {/* Borde del divisor con línea verde fósforo */}
           <div
             style={{
               position: "absolute",
               top: 0,
               bottom: 0,
-              right: 0,
-              width: 44,
-              background: "rgba(244,63,94,0.5)",
-              opacity: coldAfter,
-            }}
-          />
-        </AbsoluteFill>
-      ) : null}
-
-      {/* Desgarro VHS 489 */}
-      {tear489 > 0.004 ? <TearStatic opacity={tear489} /> : null}
-      {tear489 > 0.004 ? (
-        <div
-          style={{
-            position: "absolute",
-            left: 0,
-            right: 0,
-            top: interpolate(frame, [489, 501], [820, 700], {
-              extrapolateLeft: "clamp",
-              extrapolateRight: "clamp",
-            }),
-            height: 3,
-            background: "rgba(230,244,255,0.8)",
-            boxShadow: "0 0 18px rgba(34,211,238,0.8)",
-            opacity: tear489,
-          }}
-        />
-      ) : null}
-
-      {/* Whip-pan 846 */}
-      {whip846 > 0.004 ? (
-        <WhipStreak from={846} len={10} opacity={whip846} />
-      ) : null}
-
-      {/* Whip-pan + glitch 1113 */}
-      {whip1113 > 0.004 ? (
-        <WhipStreak from={1113} len={12} opacity={whip1113} />
-      ) : null}
-      {tear1113 > 0.004 ? <TearStatic opacity={tear1113 * 0.9} /> : null}
-
-      {/* Apagón duro + destello carmesí 1347 */}
-      {black > 0.004 ? (
-        <AbsoluteFill style={{ background: "#000000", opacity: black }} />
-      ) : null}
-      {whiteSnap > 0.004 ? (
-        <AbsoluteFill
-          style={{ background: "#FFFFFF", opacity: whiteSnap }}
-        />
-      ) : null}
-      {crimson > 0.004 ? (
-        <AbsoluteFill style={{ background: "#7F1D1D", opacity: crimson }} />
-      ) : null}
-
-      {/* División cromática global en picos de tensión (flash 1) */}
-      {flashTotal > 0.02 ? (
-        <AbsoluteFill style={{ mixBlendMode: "screen" }}>
-          <div
-            style={{
-              position: "absolute",
-              top: 0,
-              bottom: 0,
-              left: 0,
-              width: interpolate(flashTotal, [0, 1], [0, 34], {
-                extrapolateLeft: "clamp",
-                extrapolateRight: "clamp",
-              }),
-              background: "rgba(34,211,238,0.35)",
-              opacity: Math.min(1, flashTotal),
-            }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              top: 0,
-              bottom: 0,
-              right: 0,
-              width: interpolate(flashTotal, [0, 1], [0, 34], {
-                extrapolateLeft: "clamp",
-                extrapolateRight: "clamp",
-              }),
-              background: "rgba(244,63,94,0.35)",
-              opacity: Math.min(1, flashTotal),
+              left: edgeX,
+              width: 5,
+              background:
+                "linear-gradient(180deg, transparent, rgba(34,197,94,0.95) 20%, rgba(34,197,94,0.95) 80%, transparent)",
+              boxShadow: "0 0 26px rgba(34,197,94,0.85)",
+              opacity: edgeOp,
             }}
           />
         </AbsoluteFill>
-      ) : null}
+      )}
+
+      {/* ============ T4 (1892): cierre de cono oscuro + borde de pared ============ */}
+      {t4Active && (
+        <AbsoluteFill>
+          <AbsoluteFill style={{ backgroundColor: "#040507", opacity: darkClose }} />
+          <svg viewBox="0 0 1080 1920" width="100%" height="100%">
+            <defs>
+              <linearGradient id="st-wall" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="#13161A" />
+                <stop offset="70%" stopColor="#0B0D10" />
+                <stop offset="100%" stopColor="#06080A" />
+              </linearGradient>
+            </defs>
+            <g opacity={wallOp}>
+              <polygon
+                points={`${wallX},0 ${wallX + 26},-20 ${wallX - 12},420 ${wallX + 20},900 ${wallX - 10},1400 ${wallX + 18},1750 ${wallX - 8},1920 1080,1920 1080,0`}
+                fill="url(#st-wall)"
+              />
+              <path
+                d={`M ${wallX} 0 L ${wallX + 26} -20 L ${wallX - 12} 420 L ${wallX + 20} 900 L ${wallX - 10} 1400 L ${wallX + 18} 1750 L ${wallX - 8} 1920`}
+                stroke="#23282F"
+                strokeWidth="3"
+                fill="none"
+                opacity="0.9"
+              />
+            </g>
+          </svg>
+        </AbsoluteFill>
+      )}
+
+      {/* ============ T5 (2188): marco de puerta abriéndose a la luz fría ============ */}
+      {t5Active && (
+        <AbsoluteFill>
+          <AbsoluteFill
+            style={{
+              background:
+                "radial-gradient(circle at 540px 850px, rgba(191,217,236,0.85) 0%, rgba(127,168,200,0.4) 34%, rgba(4,7,10,0.95) 100%)",
+              opacity: coldLight,
+            }}
+          />
+          <svg viewBox="0 0 1080 1920" width="100%" height="100%">
+            <g>
+              <rect x="0" y="0" width="1080" height={frameThick} fill="#040507" />
+              <rect x="0" y={1920 - frameThick} width="1080" height={frameThick} fill="#040507" />
+              <rect x="0" y="0" width={frameThick} height="1920" fill="#040507" />
+              <rect x={1080 - frameThick} y="0" width={frameThick} height="1920" fill="#040507" />
+              {/* Borde interior del marco */}
+              <rect x={frameThick - 14} y={frameThick - 14} width={1080 - 2 * frameThick + 28} height={1920 - 2 * frameThick + 28} fill="none" stroke="#8FB2CC" strokeWidth="3" opacity="0.7" />
+            </g>
+          </svg>
+        </AbsoluteFill>
+      )}
+
+      {/* ============ T6 (2521): barrido dividido diagonal + estática/agua ============ */}
+      {t6Active && (
+        <AbsoluteFill>
+          {/* Línea diagonal luminosa verde/cian */}
+          <div
+            style={{
+              position: "absolute",
+              top: -400,
+              left: diagX,
+              width: 10,
+              height: 2720,
+              transform: "rotate(24deg)",
+              background:
+                "linear-gradient(180deg, transparent, #22C55E 22%, #E8F7EE 50%, #22D3EE 78%, transparent)",
+              boxShadow: "0 0 40px rgba(34,197,94,0.9)",
+              opacity: diagOp,
+            }}
+          />
+          {/* Ráfaga breve de estática */}
+          <AbsoluteFill
+            style={{
+              background:
+                "repeating-linear-gradient(0deg, rgba(34,197,94,0.5) 0px, rgba(34,197,94,0.5) 1px, transparent 1px, transparent 4px)",
+              opacity: staticOp * 0.6,
+            }}
+          />
+          {/* Ráfaga de agua abisal */}
+          <AbsoluteFill
+            style={{
+              background:
+                "radial-gradient(circle at 50% 78%, rgba(34,211,238,0.55) 0%, rgba(7,43,64,0.5) 34%, transparent 70%)",
+              opacity: waterBurst,
+              mixBlendMode: "screen",
+            }}
+          />
+        </AbsoluteFill>
+      )}
     </AbsoluteFill>
   );
 };

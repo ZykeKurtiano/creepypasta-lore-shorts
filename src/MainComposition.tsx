@@ -1,104 +1,79 @@
 import React from "react";
-import {
-  AbsoluteFill,
-  Easing,
-  interpolate,
-  Sequence,
-  useCurrentFrame,
-  useVideoConfig,
-} from "remotion";
+import { AbsoluteFill, Sequence } from "remotion";
 import { AudioMaster } from "./components/AudioMaster";
-import { Camera25D } from "./components/Camera25D";
+import { Camera25D, CameraIntent } from "./components/Camera25D";
 import { KineticSubtitles } from "./components/KineticSubtitles";
 import { SceneTransitions } from "./components/SceneTransitions";
 import { VhsPostProcess } from "./components/VhsPostProcess";
-import { TOTAL_FRAMES } from "./data/episodeConfig";
-import { Scene1CrtHook } from "./scenes/Scene1CrtHook";
-import { Scene2MaryBedroom } from "./scenes/Scene2MaryBedroom";
-import { Scene3RetroEmailRetake } from "./scenes/Scene3RetroEmailRetake";
-import { Scene4BiologicalForest } from "./scenes/Scene4BiologicalForest";
-import { Scene5ChillingOutro } from "./scenes/Scene5ChillingOutro";
+import { SCENES, TOTAL_FRAMES } from "./data/episodeConfig";
+import { BenScene1Cartridge } from "./scenes/BenScene1Cartridge";
+import { BenScene2StatueFire } from "./scenes/BenScene2StatueFire";
+import { BenScene3Origin4chan } from "./scenes/BenScene3Origin4chan";
+import { BenScene4HouseRetake } from "./scenes/BenScene4HouseRetake";
+import { BenScene5TruthWater } from "./scenes/BenScene5TruthWater";
+import { BenScene6DebateOutro } from "./scenes/BenScene6DebateOutro";
 
 /**
- * MainComposition — Orquestador maestro.
+ * MainComposition — Orquestador maestro del Short BEN Drowned.
  *
- * Monta las 5 escenas 2.5D en <Sequence>, envuelve cada una con la
- * Camera25D (handheld + zoom punches), ejecuta las transiciones
- * dinámicas entre escenas (deslizamiento whip-pan real sobre las dos
- * escenas implicadas) y apila encima subtítulos, post-proceso VHS y
- * la mezcla de audio.
+ * Monta las 6 escenas 2.5D en <Sequence> usando los límites exactos de
+ * SCENES, envuelve cada una con Camera25D (deriva ultra-suave por
+ * intención + micro-impactos puntuales de zoomPunch), mantiene un
+ * solapamiento limpio de transición (OVERLAP = 16 frames) para que
+ * jamás exista un corte seco ni un frame vacío, y apila encima las
+ * transiciones globales, subtítulos cinéticos, post-proceso VHS y la
+ * mezcla de audio.
  */
+
+/** Solapamiento limpio entre escenas (jamás un corte seco). */
+const OVERLAP = 16;
 
 interface SceneSpec {
   start: number;
   end: number;
+  intent: CameraIntent;
   Component: React.FC;
 }
 
 const SCENE_SPECS: SceneSpec[] = [
-  { start: 0, end: 489, Component: Scene1CrtHook },
-  { start: 489, end: 846, Component: Scene2MaryBedroom },
-  { start: 846, end: 1113, Component: Scene3RetroEmailRetake },
-  { start: 1113, end: 1347, Component: Scene4BiologicalForest },
-  { start: 1347, end: TOTAL_FRAMES, Component: Scene5ChillingOutro },
+  { start: SCENES.scene1.start, end: SCENES.scene1.end, intent: "steady", Component: BenScene1Cartridge },
+  { start: SCENES.scene2.start, end: SCENES.scene2.end, intent: "pan", Component: BenScene2StatueFire },
+  { start: SCENES.scene3.start, end: SCENES.scene3.end, intent: "push", Component: BenScene3Origin4chan },
+  { start: SCENES.scene4.start, end: SCENES.scene4.end, intent: "dolly", Component: BenScene4HouseRetake },
+  { start: SCENES.scene5.start, end: SCENES.scene5.end, intent: "push", Component: BenScene5TruthWater },
+  { start: SCENES.scene6.start, end: SCENES.scene6.end, intent: "push", Component: BenScene6DebateOutro },
 ];
 
-/** Fronteras con whip-pan: duración del barrido en frames. */
-const WHIP_WINDOWS: Record<number, number> = {
-  846: 10,
-  1113: 12,
-};
-
 export const MainComposition: React.FC = () => {
-  const frame = useCurrentFrame();
-  const { width } = useVideoConfig();
-
   return (
     <AbsoluteFill style={{ backgroundColor: "#040507" }}>
-      {/* Escenas con deslizamiento whip-pan real en las fronteras */}
-      {SCENE_SPECS.map(({ start, end, Component }, i) => {
-        const whipIn = WHIP_WINDOWS[start] ?? 0;
-        const whipOut = WHIP_WINDOWS[end] ?? 0;
-        if (frame < start || frame >= end + whipOut) {
-          return null;
-        }
-
-        let tx = 0;
-        if (whipIn > 0 && frame < start + whipIn) {
-          tx = interpolate(frame, [start, start + whipIn], [width, 0], {
-            easing: Easing.in(Easing.cubic),
-            extrapolateLeft: "clamp",
-            extrapolateRight: "clamp",
-          });
-        } else if (whipOut > 0 && frame >= end) {
-          tx = interpolate(frame, [end, end + whipOut], [0, -width * 0.65], {
-            easing: Easing.out(Easing.cubic),
-            extrapolateLeft: "clamp",
-            extrapolateRight: "clamp",
-          });
-        }
-
+      {/* Escenas 1–6 con solapamiento limpio (las posteriores se apilan encima) */}
+      {SCENE_SPECS.map(({ start, end, intent, Component }, i) => {
+        const isLast = i === SCENE_SPECS.length - 1;
+        const durationInFrames = isLast
+          ? TOTAL_FRAMES - start
+          : end - start + OVERLAP;
         return (
-          <AbsoluteFill
+          <Sequence
             key={i}
-            style={{ transform: `translateX(${tx}px)`, overflow: "hidden" }}
+            from={start}
+            durationInFrames={durationInFrames}
+            name={`ben-scene-${i + 1}`}
           >
-            <Sequence from={start} durationInFrames={end - start + whipOut}>
-              <Camera25D sceneStart={start} sceneEnd={end}>
-                <Component />
-              </Camera25D>
-            </Sequence>
-          </AbsoluteFill>
+            <Camera25D sceneStart={start} sceneEnd={end} intent={intent}>
+              <Component />
+            </Camera25D>
+          </Sequence>
         );
       })}
 
-      {/* Transiciones dinámicas entre escenas */}
+      {/* Transiciones dinámicas globales entre escenas */}
       <SceneTransitions />
 
-      {/* Subtítulos cinéticos palabra por palabra */}
+      {/* Subtítulos cinéticos palabra por palabra (zona segura top 1235) */}
       <KineticSubtitles />
 
-      {/* Post-procesado VHS + HUD */}
+      {/* Post-procesado VHS + HUD diegético */}
       <VhsPostProcess />
 
       {/* Mezcla de audio */}

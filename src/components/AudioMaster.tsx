@@ -4,19 +4,23 @@ import { TRANSCRIPT_WORDS } from "../data/transcript";
 import { FPS, NARRATION_DURATION_SEC, TOTAL_FRAMES } from "../data/episodeConfig";
 
 /**
- * AudioMaster — Mezcla de audio del episodio:
+ * AudioMaster — Mezcla de audio del episodio BEN Drowned (2754 frames @ 30 fps):
  *  - narracion.mp3 al volumen 1.0 constante,
- *  - musica_terror.mp3 con ducking: 0.12 con voz activa, subida suave a
- *    0.35 en pausas (>= 0.40s) y en el cierre final (frames 1526–1583),
- *    con fundido limpio a 0.0 en los últimos 18 frames (1565–1583),
- *  - SFX con <Sequence> + <Audio> en cortes e impactos.
+ *  - musica_terror.mp3 dark ambient audible y envolvente con ducking:
+ *    0.28 con voz activa, subida suave a 0.52 en pausas dramáticas
+ *    (>= 0.38s) y en el cierre final tras la última palabra,
+ *    con fundido limpio a 0.0 en los últimos 24 frames (dinámico
+ *    usando TOTAL_FRAMES, nunca números fijos del episodio anterior).
+ *  - Media móvil ±4 frames → ataque/relajación orgánicos sin saltos.
+ *  - SFX sincronizados con los hitos de SCENES y TRANSCRIPT_WORDS
+ *    (crt_glitch, fire_whoosh, water_submerge, deep_boom).
  */
 
-const MUSIC_VOICE = 0.12;
-const MUSIC_PAUSE = 0.35;
-const MIN_PAUSE_SEC = 0.4;
-const FINAL_FADE_START = 1565;
-const FINAL_FADE_END = 1583;
+const MUSIC_VOICE = 0.28;
+const MUSIC_PAUSE = 0.52;
+const MIN_PAUSE_SEC = 0.38;
+const FINAL_FADE_START = TOTAL_FRAMES - 24;
+const FINAL_FADE_END = TOTAL_FRAMES;
 
 const LAST_WORD_END = TRANSCRIPT_WORDS.reduce(
   (max, w) => Math.max(max, w.end),
@@ -60,7 +64,7 @@ function rawTargetAt(t: number): number {
   return MUSIC_VOICE + (MUSIC_PAUSE - MUSIC_VOICE) * k;
 }
 
-// Objetivos suavizados (media móvil ±3 frames → ataque/relajación ~0.2 s).
+// Objetivos suavizados (media móvil ±4 frames → ataque/relajación ~0.27 s).
 const SMOOTHED_TARGETS: number[] = (() => {
   const raw: number[] = [];
   for (let f = 0; f <= TOTAL_FRAMES; f++) {
@@ -70,7 +74,7 @@ const SMOOTHED_TARGETS: number[] = (() => {
   for (let f = 0; f <= TOTAL_FRAMES; f++) {
     let sum = 0;
     let n = 0;
-    for (let d = -3; d <= 3; d++) {
+    for (let d = -4; d <= 4; d++) {
       const idx = Math.min(TOTAL_FRAMES, Math.max(0, f + d));
       sum += raw[idx];
       n++;
@@ -82,7 +86,7 @@ const SMOOTHED_TARGETS: number[] = (() => {
 
 /**
  * Volumen de la música para un frame dado.
- * Ducking 0.12 (voz) ↔ 0.35 (pausas y cierre), fundido final a 0.0.
+ * Ducking 0.28 (voz) ↔ 0.52 (pausas y cierre), fundido final a 0.0.
  */
 export const computeDuckedMusicVolume = (
   frame: number,
@@ -117,37 +121,42 @@ export const AudioMaster: React.FC = () => {
         volume={(f) => computeDuckedMusicVolume(f)}
       />
 
-      {/* SFX: flash de cámara */}
-      <Sequence from={136}>
-        <Audio src={staticFile("sfx/camera_flash.mp3")} volume={0.58} />
+      {/* SFX: glitch CRT en transiciones zoom-through / entradas digitales */}
+      <Sequence from={572}>
+        <Audio src={staticFile("sfx/crt_glitch.mp3")} volume={0.44} />
       </Sequence>
-      <Sequence from={258}>
-        <Audio src={staticFile("sfx/camera_flash.mp3")} volume={0.38} />
+      <Sequence from={1242}>
+        <Audio src={staticFile("sfx/crt_glitch.mp3")} volume={0.34} />
       </Sequence>
-      <Sequence from={1346}>
-        <Audio src={staticFile("sfx/camera_flash.mp3")} volume={0.48} />
+      <Sequence from={1884}>
+        <Audio src={staticFile("sfx/crt_glitch.mp3")} volume={0.38} />
       </Sequence>
-
-      {/* SFX: estática VHS en cortes de acto */}
-      <Sequence from={486}>
-        <Audio src={staticFile("sfx/vhs_glitch.mp3")} volume={0.42} />
-      </Sequence>
-      <Sequence from={844}>
-        <Audio src={staticFile("sfx/vhs_glitch.mp3")} volume={0.36} />
-      </Sequence>
-      <Sequence from={1110}>
-        <Audio src={staticFile("sfx/vhs_glitch.mp3")} volume={0.42} />
+      <Sequence from={2514}>
+        <Audio src={staticFile("sfx/crt_glitch.mp3")} volume={0.4} />
       </Sequence>
 
-      {/* SFX: golpe subgrave en revelaciones clave */}
-      <Sequence from={422}>
-        <Audio src={staticFile("sfx/deep_growl_boom.mp3")} volume={0.45} />
+      {/* SFX: llamas volumétricas envolviendo a Link (~33.6s) */}
+      <Sequence from={1008}>
+        <Audio src={staticFile("sfx/fire_whoosh.mp3")} volume={0.56} />
       </Sequence>
-      <Sequence from={1272}>
-        <Audio src={staticFile("sfx/deep_growl_boom.mp3")} volume={0.58} />
+
+      {/* SFX: inmersión Z-Dive y agua de la bañera */}
+      <Sequence from={1216}>
+        <Audio src={staticFile("sfx/water_submerge.mp3")} volume={0.58} />
       </Sequence>
-      <Sequence from={1462}>
-        <Audio src={staticFile("sfx/deep_growl_boom.mp3")} volume={0.62} />
+      <Sequence from={2184}>
+        <Audio src={staticFile("sfx/water_submerge.mp3")} volume={0.48} />
+      </Sequence>
+      <Sequence from={2516}>
+        <Audio src={staticFile("sfx/water_submerge.mp3")} volume={0.38} />
+      </Sequence>
+
+      {/* SFX: golpe subgrave dramático en 'Tu turno' y revelación final */}
+      <Sequence from={1128}>
+        <Audio src={staticFile("sfx/deep_boom.mp3")} volume={0.62} />
+      </Sequence>
+      <Sequence from={2472}>
+        <Audio src={staticFile("sfx/deep_boom.mp3")} volume={0.65} />
       </Sequence>
     </>
   );

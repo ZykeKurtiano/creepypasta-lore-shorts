@@ -43,14 +43,15 @@ const GrainLayer: React.FC = () => {
   );
 };
 
-/** Eventos que disparan picos de aberración cromática. */
+/** Eventos que disparan picos de aberración cromática (hitos BEN Drowned). */
 const CHROMA_EVENTS: Array<{ at: number; strength: number }> = [
-  { at: 138, strength: 1 },
-  { at: 260, strength: 0.6 },
-  { at: 489, strength: 0.85 },
-  { at: 846, strength: 0.8 },
-  { at: 1113, strength: 0.85 },
-  { at: 1347, strength: 1 },
+  { at: 590, strength: 0.9 },
+  { at: 1130, strength: 0.8 },
+  { at: 1248, strength: 0.85 },
+  { at: 1892, strength: 0.7 },
+  { at: 2188, strength: 0.8 },
+  { at: 2475, strength: 0.9 },
+  { at: 2521, strength: 0.85 },
 ];
 
 const pad = (n: number): string => String(n).padStart(2, "0");
@@ -196,7 +197,7 @@ export const VhsPostProcess: React.FC = () => {
           <span style={{ color: "#DC2626", opacity: recBlink }}>●</span>
           <span style={{ opacity: 0.75 }}> REC&nbsp;&nbsp;</span>
           <span>{timecode}</span>
-          <span style={{ opacity: 0.55 }}>&nbsp;&nbsp;SP&nbsp;//&nbsp;SMILE.JPG</span>
+          <span style={{ opacity: 0.55 }}>&nbsp;&nbsp;SP&nbsp;//&nbsp;BEN.N64</span>
         </div>
       </div>
     </AbsoluteFill>

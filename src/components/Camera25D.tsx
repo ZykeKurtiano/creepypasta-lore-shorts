@@ -9,19 +9,28 @@ import {
 import { TRANSCRIPT_WORDS } from "../data/transcript";
 
 /**
- * Camera25D — Cámara 2.5D continua tipo handheld que envuelve cada escena:
- *  - balanceo multi-frecuencia suave (translateX/translateY + rotate ±0.4°),
- *  - deriva de zoom lenta y constante (ningún plano es estático),
- *  - golpes de zoom con spring() sincronizados con palabras clave
- *    (zoomPunch: true) del guion.
+ * Camera25D — Cámara 2.5D continua que envuelve cada escena:
+ *  - SIN balanceo handheld repetitivo ni sacudidas continuas.
+ *  - Una única deriva de cámara ultra-suave y motivada por escena
+ *    (`intent`: "dolly" | "pan" | "push" | "steady"), monotónica en el
+ *    progreso de la escena, para no competir con los movimientos
+ *    internos de las escenas.
+ *  - Único micro-impacto `spring` puntual por palabra `zoomPunch: true`
+ *    del guion (solo 2 en todo el Short: "turno" en Escena 2 y
+ *    "ahogado" en Escena 5), con amplitud limpia y contenida
+ *    (scale <= 0.035).
  *
- * Recibe los límites globales de la escena para poder evaluar el
- * transcript en tiempo global aunque viva dentro de un <Sequence>.
+ * Recibe los límites globales de la escena para evaluar el transcript
+ * en tiempo global aunque viva dentro de un <Sequence>.
  */
+
+export type CameraIntent = "dolly" | "pan" | "push" | "steady";
+
 interface Camera25DProps {
   sceneStart: number;
   sceneEnd: number;
   zoomDrift?: number;
+  intent?: CameraIntent;
   children: React.ReactNode;
 }
 
@@ -29,6 +38,7 @@ export const Camera25D: React.FC<Camera25DProps> = ({
   sceneStart,
   sceneEnd,
   zoomDrift = 0.07,
+  intent = "steady",
   children,
 }) => {
   const frame = useCurrentFrame(); // frame local de la escena
@@ -38,21 +48,30 @@ export const Camera25D: React.FC<Camera25DProps> = ({
   const sceneLen = Math.max(1, sceneEnd - sceneStart);
   const progress = Math.min(1, Math.max(0, (global - sceneStart) / sceneLen));
 
-  // Balanceo handheld multi-frecuencia (determinista).
-  const tx =
-    Math.sin(global * 0.011) * 6 +
-    Math.sin(global * 0.0053 + 1.7) * 4.2;
-  const ty =
-    Math.cos(global * 0.009) * 5 +
-    Math.sin(global * 0.0041 + 0.9) * 3.1;
-  const rot =
-    Math.sin(global * 0.007 + 0.5) * 0.38 +
-    Math.sin(global * 0.0031 + 2.2) * 0.16;
+  // Deriva ultra-suave, monotónica y motivada por intención (sin bucles).
+  let scale = 1;
+  let tx = 0;
+  let ty = 0;
+  switch (intent) {
+    case "dolly":
+      scale = 1 + progress * zoomDrift;
+      ty = progress * 5;
+      break;
+    case "pan":
+      tx = -progress * 24;
+      scale = 1 + progress * 0.02;
+      break;
+    case "push":
+      scale = 1 + progress * 0.055;
+      ty = progress * 3;
+      break;
+    case "steady":
+    default:
+      scale = 1 + progress * 0.015;
+      break;
+  }
 
-  // Deriva de zoom continua (zoom-in lento durante toda la escena).
-  const drift = 1 + progress * zoomDrift;
-
-  // Golpes de zoom por palabras clave (zoomPunch) del guion.
+  // Único micro-impacto spring por palabra clave (amplitude <= 0.035).
   let punch = 0;
   for (const w of TRANSCRIPT_WORDS) {
     if (!w.zoomPunch) {
@@ -60,7 +79,7 @@ export const Camera25D: React.FC<Camera25DProps> = ({
     }
     const startFrame = w.start * fps;
     const d = global - startFrame;
-    if (d >= 0 && d <= 18) {
+    if (d >= 0 && d <= 20) {
       const p = spring({
         frame: d,
         fps,
@@ -70,11 +89,8 @@ export const Camera25D: React.FC<Camera25DProps> = ({
     }
   }
 
-  const shakeX = Math.sin(global * 1.9) * 3.2 * punch;
-  const shakeY = Math.cos(global * 1.6) * 2.4 * punch;
-
-  const scale = drift * (1 + punch * 0.07);
-  const easedRot = rot + punch * Math.sin(global * 1.3) * 0.3;
+  scale *= 1 + punch * 0.035;
+  ty += -punch * 4;
 
   return (
     <AbsoluteFill
@@ -85,7 +101,7 @@ export const Camera25D: React.FC<Camera25DProps> = ({
     >
       <AbsoluteFill
         style={{
-          transform: `translate(${tx + shakeX}px, ${ty + shakeY}px) rotate(${easedRot}deg) scale(${scale})`,
+          transform: `translate(${tx}px, ${ty}px) scale(${scale})`,
           transformOrigin: "50% 50%",
         }}
       >
