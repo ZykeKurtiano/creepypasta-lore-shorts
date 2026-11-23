@@ -4,6 +4,7 @@ import {
   interpolate,
   useCurrentFrame,
 } from "remotion";
+import { SCENES } from "../data/episodeConfig";
 import { FONT_MONO } from "./SafeZone";
 
 /**
@@ -43,14 +44,13 @@ const GrainLayer: React.FC = () => {
   );
 };
 
-/** Eventos que disparan picos de aberración cromática. */
+/** Eventos que disparan picos de aberración cromática (momentos clave de Zalgo). */
 const CHROMA_EVENTS: Array<{ at: number; strength: number }> = [
-  { at: 138, strength: 1 },
-  { at: 260, strength: 0.6 },
-  { at: 489, strength: 0.85 },
-  { at: 846, strength: 0.8 },
-  { at: 1113, strength: 0.85 },
-  { at: 1347, strength: 1 },
+  { at: 430, strength: 1 },
+  { at: SCENES.scene2.start, strength: 0.85 },
+  { at: 720, strength: 0.9 },
+  { at: SCENES.scene3.start, strength: 0.85 },
+  { at: SCENES.scene4.start, strength: 1 },
 ];
 
 const pad = (n: number): string => String(n).padStart(2, "0");
@@ -196,7 +196,7 @@ export const VhsPostProcess: React.FC = () => {
           <span style={{ color: "#DC2626", opacity: recBlink }}>●</span>
           <span style={{ opacity: 0.75 }}> REC&nbsp;&nbsp;</span>
           <span>{timecode}</span>
-          <span style={{ opacity: 0.55 }}>&nbsp;&nbsp;SP&nbsp;//&nbsp;SMILE.JPG</span>
+          <span style={{ opacity: 0.55 }}>&nbsp;&nbsp;SP&nbsp;//&nbsp;ZALGO_2004</span>
         </div>
       </div>
     </AbsoluteFill>

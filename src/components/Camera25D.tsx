@@ -53,8 +53,13 @@ export const Camera25D: React.FC<Camera25DProps> = ({
   const drift = 1 + progress * zoomDrift;
 
   // Golpes de zoom por palabras clave (zoomPunch) del guion.
+  // El transcript de este episodio no marca palabras `zoomPunch`; se tipa de
+  // forma laxa el acceso para preservar la función sin tocar transcript.ts.
   let punch = 0;
-  for (const w of TRANSCRIPT_WORDS) {
+  for (const w of TRANSCRIPT_WORDS as Array<{
+    zoomPunch?: boolean;
+    start: number;
+  }>) {
     if (!w.zoomPunch) {
       continue;
     }
