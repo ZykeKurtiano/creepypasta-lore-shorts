@@ -116,11 +116,11 @@ export const AudioMaster: React.FC = () => {
         volume={(f) => computeDuckedMusicVolume(f)}
       />
 
-      {/* SFX: roce metálico sutil en "‘ve a dormir’" y acecho en dormitorio */}
-      <Sequence from={34} durationInFrames={50}>
+      {/* SFX: roce metálico sutil (archivo corrupto 2008 y acecho en dormitorio) */}
+      <Sequence from={105} durationInFrames={50}>
         <Audio src={staticFile("sfx/knife_scrape.mp3")} volume={0.44} />
       </Sequence>
-      <Sequence from={1028} durationInFrames={50}>
+      <Sequence from={1040} durationInFrames={50}>
         <Audio src={staticFile("sfx/knife_scrape.mp3")} volume={0.28} />
       </Sequence>
 

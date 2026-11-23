@@ -15,7 +15,7 @@ import { SCENES } from "./data/episodeConfig";
 import { JeffScene1Mirror } from "./scenes/JeffScene1Mirror";
 import { JeffScene2Arena } from "./scenes/JeffScene2Arena";
 import { JeffScene3Retakes } from "./scenes/JeffScene3Retakes";
-import { JeffScene4Faceoff } from "./scenes/JeffScene4Faceoff";
+import { JeffScene4Finale } from "./scenes/JeffScene4Finale";
 
 /**
  * MainComposition — Orquestador maestro de JeffTheKillerLoreShort.
@@ -25,7 +25,7 @@ import { JeffScene4Faceoff } from "./scenes/JeffScene4Faceoff";
  *  1. JeffScene1Mirror  (dolly-in lento y estable)
  *  2. JeffScene2Arena   (pan lateral suave)
  *  3. JeffScene3Retakes (avance progresivo lento en eje Z)
- *  4. JeffScene4Faceoff (corte con deep_boom único + plano fijo tenso)
+ *  4. JeffScene4Finale (corte con deep_boom único + plano fijo tenso)
  *
  * Aplica deslizamiento whip-pan real en el barrido rápido Escena 2 → 3
  * y apila encima transiciones, subtítulos cinéticos, post-procesado VHS y audio.
@@ -41,7 +41,7 @@ const SCENE_SPECS: SceneSpec[] = [
   { ...SCENES.scene1, Component: JeffScene1Mirror },
   { ...SCENES.scene2, Component: JeffScene2Arena },
   { ...SCENES.scene3, Component: JeffScene3Retakes },
-  { ...SCENES.scene4, Component: JeffScene4Faceoff },
+  { ...SCENES.scene4, Component: JeffScene4Finale },
 ];
 
 /** Frontera con barrido rápido (whip-pan): Escena 2 → 3 (10 frames). */

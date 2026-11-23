@@ -2,215 +2,404 @@ import React from "react";
 import {
   AbsoluteFill,
   Easing,
-  Img,
   interpolate,
-  staticFile,
+  spring,
   useCurrentFrame,
+  useVideoConfig,
 } from "remotion";
 import {
   DustSporesLayer,
   ForegroundVignette,
   MistLayer,
 } from "../components/Atmosphere25D";
+import { ForestParallax25D } from "../components/ForestParallax25D";
 import { FONT_MONO, FONT_SANS, SafeCentered } from "../components/SafeZone";
-import { SCENES } from "../data/episodeConfig";
+import { JeffCharacter } from "../components/characters/JeffCharacter";
+import { SlenderCharacter } from "../components/characters/SlenderCharacter";
+import { HumanSilhouette } from "../components/characters/HumanSilhouette";
 
 /**
- * JeffScene2Arena (frames 436–896, duración 460 frames, 14.53–29.87s)
- * Juegos indie, YouTube y Jeff vs Slenderman.
+ * JeffScene2Arena (frames 395–911 · 13.17–30.37s)
+ * Juegos indie, YouTube y rivalidad con Slenderman.
  *
- * Capas 2.5D reales:
- *  1. Fondo: public/art/bg_youtube_arena.png con desplazamiento lateral (pan) suave
- *  2. Neblina fría-carmesí y reflejos ambientales de los monitores
- *  3. Capas opuestas independientes:
- *       · Izquierda: public/art/char_jeff_shadow.png
- *       · Derecha:   public/art/char_slender_vs.png (emerge de las sombras hacia el duelo)
- *  4. Partículas flotando entre los planos
- *  5. Tarjeta glassmorphism limpia en zona segura: "Jumpscare Games · YouTube Trend"
- *     + píldora de rivalidad "JEFF vs SLENDERMAN" en la segunda mitad
- *  6. Viñeta frontal
+ * Escenario 2.5D ancho enlazado por un pan lateral suave hacia la mitad:
+ *  - Primera mitad (local 0–275): HumanSilhouette gamer con audífonos
+ *    reaccionando con sobresalto (spring) frente a un jumpscare estilizado
+ *    en un monitor retro + tarjeta "Indie Horror · Fiebre en YouTube".
+ *  - Segunda mitad (local 260–516): pan lateral suave hacia un bosque brumoso
+ *    2.5D revelando el cara a cara JeffCharacter (izq) vs SlenderCharacter
+ *    (der, tentáculos ondulando) + tarjeta "JEFF vs SLENDERMAN".
  *
- * Movimiento de cámara único: desplazamiento lateral (pan) suave sin shake ni zoom repetitivo.
+ * Movimiento de cámara único: pan lateral suave continuo, cero shake periódico.
  */
 
-const SCENE_LEN = SCENES.scene2.end - SCENES.scene2.start;
+const STAGE_WIDTH = 2160;
+const PAN_START = 260;
+const PAN_END = 340;
+const STARTLE_FRAME = 150;
 
 export const JeffScene2Arena: React.FC = () => {
   const frame = useCurrentFrame();
-  const progress = Math.min(1, Math.max(0, frame / SCENE_LEN));
+  const { fps } = useVideoConfig();
 
-  // Desplazamiento lateral (pan) suave con escala constante de seguridad (cero bordes negros)
-  const bgPanX = interpolate(progress, [0, 1], [38, -38], {
-    easing: Easing.inOut(Easing.sin),
-  });
-
-  // Aparición progresiva de la rivalidad (~local frame 285 = ~24.0s "protagonizó la rivalidad")
-  const rivalryProg = interpolate(frame, [265, 340], [0, 1], {
+  // Pan lateral suave: quieto en la primera mitad, desliza a la segunda.
+  const panProg = interpolate(frame, [PAN_START, PAN_END], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
+    easing: Easing.inOut(Easing.cubic),
+  });
+  const panX = -(STAGE_WIDTH - 1080) * panProg;
+
+  // Sobresalto del gamer (spring) frente al jumpscare.
+  const scare = spring({
+    frame: frame - STARTLE_FRAME,
+    fps,
+    config: { damping: 9, stiffness: 140, mass: 0.8 },
   });
 
-  // Capa izquierda: Jeff (paralaje independiente opuesto al pan + respiración orgánica)
-  const jeffX = interpolate(progress, [0, 1], [-22, 16]) + rivalryProg * 14;
-  const jeffBreath = Math.sin(frame * 0.034) * 5;
-  const jeffOpacity = interpolate(frame, [0, 20], [0.55, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-
-  // Capa derecha: Slenderman (acecha tenue al inicio y se impone al nombrar la rivalidad)
-  const slenderX = interpolate(progress, [0, 1], [34, -14]) - rivalryProg * 18;
-  const slenderBreath = Math.cos(frame * 0.026 + 1.1) * 4.5;
-  const slenderOpacity = interpolate(frame, [0, 35, 255, 325], [0.25, 0.52, 0.6, 1], {
+  // Rostro fantasmal del jumpscare: visible desde el inicio y crece hasta el sobresalto.
+  const faceOpacity = interpolate(frame, [20, 110], [0.4, 0.94], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const slenderScale = 0.94 + rivalryProg * 0.08;
+  const scareScale = 1 + scare * 0.22;
+  const faceGlitch = Math.sin(frame * 1.7) * 0.7 + Math.sin(frame * 0.9) * 0.5;
+  // Destello rojo/blanco puntual sincronizado con startleFrame.
+  const scareFlash = interpolate(
+    frame,
+    [STARTLE_FRAME, STARTLE_FRAME + 3, STARTLE_FRAME + 14],
+    [0, 1, 0],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+  );
 
-  // Entrada limpia de la tarjeta glassmorphism
+  // Parpadeo determinista del monitor del gamer.
+  const gamerGlow = 0.8 + 0.06 * Math.sin(frame * 0.27) + 0.04 * Math.sin(frame * 0.63);
+
+  // Entrada de la tarjeta.
   const cardIn = interpolate(frame, [6, 26], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const cardSlideY = interpolate(frame, [6, 26], [-12, 0], {
+  const cardY = interpolate(frame, [6, 26], [-12, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#040507", overflow: "hidden" }}>
-      {/* 1. Fondo 9:16 generado en Fal.ai (pan lateral suave) */}
-      <AbsoluteFill
+      {/* Escenario ancho 2.5D enlazado por el pan lateral */}
+      <div
         style={{
-          transform: `translateX(${bgPanX}px) scale(1.12)`,
-          transformOrigin: "50% 50%",
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: STAGE_WIDTH,
+          height: 1920,
+          transform: `translateX(${panX}px)`,
         }}
       >
-        <Img
-          src={staticFile("art/bg_youtube_arena.png")}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            filter: "brightness(0.78) contrast(1.1)",
-          }}
-        />
-      </AbsoluteFill>
+        {/* ============ SET A (x 0–1080): gamer + jumpscare ============ */}
+        <div style={{ position: "absolute", left: 0, width: 1080, height: 1920, overflow: "hidden" }}>
+          {/* Fondo de la habitación gamer */}
+          <AbsoluteFill
+            style={{
+              background:
+                "linear-gradient(180deg, #0A1014 0%, #060A0E 52%, #040507 100%)",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "radial-gradient(ellipse at 42% 46%, rgba(14, 58, 74, 0.5) 0%, transparent 60%)",
+            }}
+          />
 
-      {/* Resplandor dual sutil de los monitores (cian izq / carmesí der) */}
-      <div
-        style={{
-          position: "absolute",
-          top: 520,
-          left: -120 + bgPanX * 0.5,
-          width: 660,
-          height: 740,
-          background:
-            "radial-gradient(circle, rgba(34, 211, 238, 0.16) 0%, transparent 66%)",
-          filter: "blur(36px)",
-          pointerEvents: "none",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          top: 500,
-          right: -140 - bgPanX * 0.5,
-          width: 680,
-          height: 760,
-          background: `radial-gradient(circle, rgba(220, 38, 38, ${0.15 + rivalryProg * 0.14}) 0%, transparent 66%)`,
-          filter: "blur(40px)",
-          pointerEvents: "none",
-        }}
-      />
+          {/* Monitor retro con jumpscare */}
+          <div
+            style={{ position: "absolute", left: 110, top: 560, width: 540, height: 440 }}
+          >
+            <svg width="100%" height="100%" viewBox="0 0 540 440">
+              <defs>
+                <linearGradient id="s2-bezel" x1="0" y1="0" x2="0.4" y2="1">
+                  <stop offset="0%" stopColor="#3A454E" />
+                  <stop offset="55%" stopColor="#202B33" />
+                  <stop offset="100%" stopColor="#0C1218" />
+                </linearGradient>
+              </defs>
+              <path d="M 240 414 L 210 434 L 330 434 L 300 414 Z" fill="#141D24" />
+              <rect x="180" y="434" width="180" height="14" rx="6" fill="#1A232C" />
+              <rect x="10" y="10" width="520" height="406" rx="24" fill="url(#s2-bezel)" stroke="#0A1014" strokeWidth="3" />
+            </svg>
 
-      {/* 2. Neblina atmosférica intermedia */}
-      <MistLayer
-        tint="rgba(78, 134, 162, 0.15)"
-        opacity={0.85}
-        speed={0.5}
-        yOffset={60}
-        seed={22}
-      />
+            {/* Pantalla */}
+            <div
+              style={{
+                position: "absolute",
+                left: 24,
+                top: 24,
+                width: 492,
+                height: 378,
+                borderRadius: 10,
+                overflow: "hidden",
+                backgroundColor: "#050A0E",
+              }}
+            >
+              {/* Pasillo de juego oscuro */}
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background:
+                    "radial-gradient(ellipse at 50% 55%, rgba(24,58,72,0.55) 0%, rgba(4,7,9,0.9) 70%)",
+                }}
+              />
+              {/* Jumpscare estilizado indie horror: rostro fantasmal pálido/carmesí */}
+              <svg
+                width="100%"
+                height="100%"
+                viewBox="0 0 492 378"
+                preserveAspectRatio="xMidYMid slice"
+                style={{ position: "absolute", inset: 0, opacity: faceOpacity }}
+              >
+                <defs>
+                  <radialGradient id="s2-face" cx="50%" cy="42%" r="62%">
+                    <stop offset="0%" stopColor="#F2EFE9" />
+                    <stop offset="48%" stopColor="#C9CFD4" />
+                    <stop offset="78%" stopColor="#8B9AA6" />
+                    <stop offset="100%" stopColor="#4A5560" />
+                  </radialGradient>
+                  <radialGradient id="s2-eye" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stopColor="#DC2626" />
+                    <stop offset="62%" stopColor="#7F1D1D" />
+                    <stop offset="100%" stopColor="#0B0B0E" />
+                  </radialGradient>
+                  <linearGradient id="s2-grin" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#0B0B0E" />
+                    <stop offset="100%" stopColor="#DC2626" />
+                  </linearGradient>
+                </defs>
 
-      {/* 3A. Capa derecha (Slenderman emergiendo desde el bosque/penumbra) */}
-      <div
-        style={{
-          position: "absolute",
-          top: 540,
-          right: -75,
-          width: 600,
-          height: 780,
-          opacity: slenderOpacity,
-          transform: `translate(${slenderX}px, ${slenderBreath}px) scale(${slenderScale})`,
-          transformOrigin: "55% 45%",
-          WebkitMaskImage:
-            "linear-gradient(to bottom, black 0%, black 74%, rgba(0,0,0,0.4) 90%, transparent 99%)",
-          maskImage:
-            "linear-gradient(to bottom, black 0%, black 74%, rgba(0,0,0,0.4) 90%, transparent 99%)",
-        }}
-      >
-        <Img
-          src={staticFile("art/char_slender_vs.png")}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "contain",
-            filter:
-              "brightness(0.86) contrast(1.16) drop-shadow(0 24px 44px rgba(0,0,0,0.92)) drop-shadow(-8px 0 22px rgba(220,38,38,0.22))",
-          }}
-        />
+                {/* Halo de distorsión / estática trasera */}
+                <ellipse cx="246" cy="188" rx="178" ry="150" fill="none" stroke="rgba(220,38,38,0.4)" strokeWidth="2" opacity="0.5" />
+                <ellipse cx="246" cy="188" rx="152" ry="126" fill="none" stroke="rgba(242,239,233,0.16)" strokeWidth="1.5" />
+
+                {/* Rostro fantasmal (glitch lateral sutil + pop de sobresalto) */}
+                <g transform={`translate(246 190) scale(${scareScale}) translate(${-246 + faceGlitch} ${-190})`}>
+                  <path
+                    d="M 246 64 C 196 68 158 118 154 182 C 150 248 190 316 246 328 C 302 316 342 248 338 182 C 334 118 296 68 246 64 Z"
+                    fill="url(#s2-face)"
+                  />
+                  {/* Huecos de mejillas */}
+                  <path d="M 182 216 C 194 250 220 268 246 270 C 272 268 298 250 310 216" fill="none" stroke="rgba(74,85,96,0.5)" strokeWidth="3" />
+                  {/* Ojos fijos (cuencas + pupila carmesí) */}
+                  <ellipse cx="210" cy="178" rx="27" ry="31" fill="#0B0B0E" />
+                  <ellipse cx="282" cy="178" rx="27" ry="31" fill="#0B0B0E" />
+                  <circle cx="212" cy="182" r="7" fill="url(#s2-eye)" />
+                  <circle cx="280" cy="182" r="7" fill="url(#s2-eye)" />
+                  {/* Ceño marcado */}
+                  <path d="M 183 146 C 197 136 225 138 237 148" stroke="#0B0B0E" strokeWidth="6" fill="none" strokeLinecap="round" />
+                  <path d="M 309 146 C 295 136 267 138 255 148" stroke="#0B0B0E" strokeWidth="6" fill="none" strokeLinecap="round" />
+                  {/* Nariz */}
+                  <path d="M 246 188 L 240 216 L 250 220" stroke="rgba(74,85,96,0.7)" strokeWidth="3" fill="none" strokeLinecap="round" />
+                  {/* Boca: sonrisa abierta con dientes */}
+                  <path d="M 196 252 C 216 288 276 288 296 252 C 284 300 208 300 196 252 Z" fill="url(#s2-grin)" />
+                  <path d="M 206 256 C 226 266 266 266 286 256" stroke="#F2EFE9" strokeWidth="3" fill="none" />
+                  <path d="M 216 268 L 226 266 M 240 270 L 246 268 M 256 270 L 262 268 M 270 268 L 278 264" stroke="#F2EFE9" strokeWidth="2.5" strokeLinecap="round" />
+                  {/* Líneas de estática sobre el rostro */}
+                  <path d="M 150 130 L 200 130 M 250 110 L 300 110 M 160 300 L 220 300 M 290 250 L 330 250" stroke="rgba(242,239,233,0.5)" strokeWidth="1.5" strokeLinecap="round" />
+                </g>
+              </svg>
+              {/* Interfaz retro oscura (HUD indie horror) */}
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  pointerEvents: "none",
+                  fontFamily: FONT_MONO,
+                }}
+              >
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 12,
+                    left: 14,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    fontSize: 13,
+                    fontWeight: 700,
+                    letterSpacing: 1.6,
+                    color: "#F2EFE9",
+                  }}
+                >
+                  <span
+                    style={{
+                      display: "inline-block",
+                      width: 9,
+                      height: 9,
+                      borderRadius: "50%",
+                      backgroundColor: "#DC2626",
+                      boxShadow: "0 0 8px rgba(220,38,38,0.9)",
+                    }}
+                  />
+                  REC
+                </div>
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 12,
+                    right: 14,
+                    fontSize: 13,
+                    fontWeight: 700,
+                    letterSpacing: 1.6,
+                    color: "rgba(242,239,233,0.75)",
+                  }}
+                >
+                  CH-01 // DISTORSIÓN
+                </div>
+                <div
+                  style={{
+                    position: "absolute",
+                    bottom: 12,
+                    left: 14,
+                    fontSize: 12,
+                    letterSpacing: 1.4,
+                    color: "rgba(220,38,38,0.85)",
+                  }}
+                >
+                  SYS.ERR · STATIC LEAK
+                </div>
+              </div>
+              {/* Destello rojo/blanco en startleFrame */}
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background:
+                    "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.92) 0%, rgba(220,38,38,0.78) 46%, rgba(220,38,38,0) 76%)",
+                  mixBlendMode: "screen",
+                  opacity: scareFlash,
+                  pointerEvents: "none",
+                }}
+              />
+              {/* Scanlines + glow */}
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background:
+                    "repeating-linear-gradient(to bottom, rgba(0,0,0,0.35) 0px, rgba(0,0,0,0.35) 1px, transparent 1px, transparent 3px)",
+                  opacity: 0.6,
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background:
+                    "radial-gradient(ellipse at 50% 50%, rgba(34,211,238,0.22) 0%, transparent 60%)",
+                  opacity: gamerGlow,
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Gamer en primer plano, centrado y completo en la mitad izquierda */}
+          <div
+            style={{
+              position: "absolute",
+              left: 420,
+              top: 690,
+              width: 520,
+              height: 588,
+              WebkitMaskImage:
+                "linear-gradient(to bottom, black 0%, black 74%, rgba(0,0,0,0.4) 92%, transparent 100%)",
+              maskImage:
+                "linear-gradient(to bottom, black 0%, black 74%, rgba(0,0,0,0.4) 92%, transparent 100%)",
+            }}
+          >
+            <HumanSilhouette
+              mode="gamer"
+              width={520}
+              rimColor="#22D3EE"
+              startleFrame={STARTLE_FRAME}
+            />
+          </div>
+
+          {/* Neblina + polvo del set A */}
+          <MistLayer tint="rgba(96, 152, 168, 0.12)" opacity={0.7} speed={0.4} yOffset={50} seed={22} />
+          <DustSporesLayer count={24} color="#A5D8EA" seed={29} opacity={0.6} minY={260} maxY={1480} />
+        </div>
+
+        {/* ============ SET B (x 1080–2160): bosque + Jeff vs Slenderman ============ */}
+        <div style={{ position: "absolute", left: 1080, width: 1080, height: 1920, overflow: "hidden" }}>
+          <ForestParallax25D cameraZoom={0.4} fogDensity={0.8} redTint={0.16} cameraShake={0.2} />
+
+          {/* Jeff (izquierda) */}
+          <div
+            style={{
+              position: "absolute",
+              top: 640,
+              left: -60,
+              width: 580,
+              height: 718,
+              transform: `translateX(${panProg * -14}px) scale(${0.92 + panProg * 0.08})`,
+              transformOrigin: "48% 45%",
+              WebkitMaskImage:
+                "linear-gradient(to bottom, black 0%, black 70%, rgba(0,0,0,0.4) 88%, transparent 98%)",
+              maskImage:
+                "linear-gradient(to bottom, black 0%, black 70%, rgba(0,0,0,0.4) 88%, transparent 98%)",
+              filter: "drop-shadow(-8px 0 26px rgba(220,38,38,0.22))",
+            }}
+          >
+            <JeffCharacter
+              width={580}
+              rimColor="#DC2626"
+              crimsonAccent={0.6}
+              headTiltBoost={-1}
+            />
+          </div>
+
+          {/* Slenderman (derecha, tentáculos ondulando) */}
+          <div
+            style={{
+              position: "absolute",
+              top: 600,
+              right: -80,
+              width: 580,
+              height: 706,
+              transform: `translateX(${panProg * 14}px) scale(${0.92 + panProg * 0.08})`,
+              transformOrigin: "52% 45%",
+              WebkitMaskImage:
+                "linear-gradient(to bottom, black 0%, black 70%, rgba(0,0,0,0.4) 88%, transparent 98%)",
+              maskImage:
+                "linear-gradient(to bottom, black 0%, black 70%, rgba(0,0,0,0.4) 88%, transparent 98%)",
+              filter: "drop-shadow(8px 0 26px rgba(148,210,238,0.2))",
+            }}
+          >
+            <SlenderCharacter
+              width={580}
+              rimColor="#38BDF8"
+              tentacleIntensity={1.1}
+              headTiltBoost={1}
+            />
+          </div>
+
+          {/* Ceniza del set B */}
+          <DustSporesLayer count={30} color="#DC2626" accentColor="#FDE047" seed={47} opacity={0.7} minY={300} maxY={1520} />
+        </div>
       </div>
 
-      {/* 3B. Capa izquierda (Jeff the Killer en plano medio-cercano) */}
-      <div
-        style={{
-          position: "absolute",
-          top: 575,
-          left: -75,
-          width: 600,
-          height: 780,
-          opacity: jeffOpacity,
-          transform: `translate(${jeffX}px, ${jeffBreath}px) scale(1.01)`,
-          transformOrigin: "45% 45%",
-          WebkitMaskImage:
-            "linear-gradient(to bottom, black 0%, black 74%, rgba(0,0,0,0.4) 90%, transparent 99%)",
-          maskImage:
-            "linear-gradient(to bottom, black 0%, black 74%, rgba(0,0,0,0.4) 90%, transparent 99%)",
-        }}
-      >
-        <Img
-          src={staticFile("art/char_jeff_shadow.png")}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "contain",
-            filter:
-              "brightness(0.85) contrast(1.14) saturate(0.84) drop-shadow(0 24px 44px rgba(0,0,0,0.92)) drop-shadow(10px 0 22px rgba(34,211,238,0.22))",
-          }}
-        />
-      </div>
-
-      {/* 4. Polvo/esporas iluminadas entre los personajes */}
-      <DustSporesLayer
-        count={30}
-        color="#A5D8EA"
-        accentColor="#F43F5E"
-        seed={29}
-        opacity={0.82}
-        minY={260}
-        maxY={1480}
-      />
-
-      {/* 5. Viñeta frontal */}
+      {/* Viñeta frontal (fija) */}
       <ForegroundVignette
         edgeStrength={0.76}
         topDarkness={0.58}
         bottomDarkness={0.9}
       />
 
-      {/* 6. Tarjetas glassmorphism limpias dentro de zona segura (top 356) */}
+      {/* Tarjeta glassmorphism fija que actualiza su contenido con el pan */}
       <SafeCentered top={356} zIndex={10}>
         <div
           style={{
@@ -225,68 +414,82 @@ export const JeffScene2Arena: React.FC = () => {
               "0 16px 46px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.08)",
             backdropFilter: "blur(10px)",
             opacity: cardIn,
-            transform: `translateY(${cardSlideY}px)`,
+            transform: `translateY(${cardY}px)`,
           }}
         >
+          {/* Contenido superpuesto con crossfade (grid stack) */}
+          <div style={{ display: "grid" }}>
+          {/* Contenido primera mitad: Indie Horror */}
           <div
             style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 12,
-              fontFamily: FONT_SANS,
-              fontSize: 27,
-              fontWeight: 800,
-              letterSpacing: 0.6,
-              color: "#F2EFE9",
+              gridArea: "1 / 1",
+              opacity: 1 - panProg,
             }}
           >
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 30,
-                height: 22,
-                borderRadius: 6,
-                backgroundColor: "#DC2626",
-                boxShadow: "0 0 14px rgba(220, 38, 38, 0.75)",
-                fontSize: 12,
-                color: "#FFFFFF",
-              }}
-            >
-              ▶
-            </span>
-            <span>Jumpscare Games · YouTube Trend</span>
-          </div>
-
-          <div
-            style={{
-              marginTop: 8,
-              fontFamily: FONT_MONO,
-              fontSize: 16,
-              fontWeight: 600,
-              letterSpacing: 2.2,
-              color: "rgba(186, 214, 230, 0.8)",
-            }}
-          >
-            ERA DORADA DEL TERROR DIGITAL · 2011–2014
-          </div>
-
-          {rivalryProg > 0.02 ? (
             <div
               style={{
-                marginTop: 14,
-                paddingTop: 12,
-                borderTop: "1px solid rgba(242, 239, 233, 0.14)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 12,
+                fontFamily: FONT_SANS,
+                fontSize: 27,
+                fontWeight: 800,
+                letterSpacing: 0.6,
+                color: "#F2EFE9",
+              }}
+            >
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 30,
+                  height: 22,
+                  borderRadius: 6,
+                  backgroundColor: "#DC2626",
+                  boxShadow: "0 0 14px rgba(220, 38, 38, 0.75)",
+                  fontSize: 12,
+                  color: "#FFFFFF",
+                }}
+              >
+                ▶
+              </span>
+              <span>Indie Horror · Fiebre en YouTube</span>
+            </div>
+            <div
+              style={{
+                marginTop: 8,
+                fontFamily: FONT_MONO,
+                fontSize: 16,
+                fontWeight: 600,
+                letterSpacing: 2.2,
+                color: "rgba(186, 214, 230, 0.8)",
+              }}
+            >
+              ERA DORADA DEL TERROR DIGITAL · 2011–2014
+            </div>
+          </div>
+
+          {/* Contenido segunda mitad: Jeff vs Slenderman */}
+          <div
+            style={{
+              gridArea: "1 / 1",
+              opacity: panProg,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            <div
+              style={{
                 display: "flex",
                 justifyContent: "center",
                 alignItems: "center",
                 gap: 16,
-                opacity: rivalryProg,
                 fontFamily: FONT_SANS,
                 fontWeight: 900,
-                fontSize: 24,
+                fontSize: 30,
                 letterSpacing: 2.5,
               }}
             >
@@ -305,7 +508,20 @@ export const JeffScene2Arena: React.FC = () => {
               </span>
               <span style={{ color: "#FDE047" }}>SLENDERMAN</span>
             </div>
-          ) : null}
+            <div
+              style={{
+                marginTop: 10,
+                fontFamily: FONT_MONO,
+                fontSize: 15,
+                fontWeight: 600,
+                letterSpacing: 2,
+                color: "rgba(186, 214, 230, 0.8)",
+              }}
+            >
+              LA RIVALIDAD DEL TERROR DIGITAL
+            </div>
+          </div>
+          </div>
         </div>
       </SafeCentered>
     </AbsoluteFill>

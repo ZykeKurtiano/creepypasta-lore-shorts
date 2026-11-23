@@ -1,22 +1,25 @@
 # AGENTS.md — Creepypasta Lore Shorts Template
 
-Guía maestra reutilizable para producir **YouTube Shorts verticales (1080×1920, 9:16, 30 fps)** de terror psicológico en **2.5D / motion graphics oscuros** con Remotion, React, TypeScript y Tailwind CSS. Diseñada para adaptar rápidamente este repositorio a futuros personajes de creepypastas (Slenderman, Jeff the Killer, Ben Drowned, Siren Head, The Rake, Smile Dog, etc.).
+Guía maestra reutilizable para producir **YouTube Shorts verticales (1080×1920, 9:16, 30 fps)** de terror psicológico en **motion graphics oscuros 2.5D con ilustración vectorial articulada** usando Remotion, React, TypeScript y Tailwind CSS. Diseñada para mantener una identidad visual coherente en toda la serie de creepypastas (Slenderman, Smile Dog, Jeff the Killer, Ben Drowned, Siren Head, The Rake, etc.).
 
 ---
 
-## 1. Identidad Visual y Estética 2.5D
+## 1. Identidad Visual Unificada — Estilo Vectorial Oscuro Articulado en 2.5D
 
 - **Formato:** `1080 × 1920` px (relación de aspecto `9:16`), `30 fps`, duración objetivo `45–55 s`.
-- **Estilo:** Terror psicológico atmosférico en **2.5D** — sin dependencias de video stock. Cada escena se compone montando activos cinematográficos generados con **Fal.ai** en `public/art/` (fondos atmosféricos 9:16 y personajes/criaturas/objetos recortados en PNG transparente) sobre capas con paralaje en profundidad Z, niebla orgánica en movimiento, partículas y post-procesado analógico estilo cinta VHS en Remotion.
+- **Prohibición de imágenes fotorrealistas estáticas:** Queda **estrictamente prohibido** usar imágenes fotorrealistas estáticas generadas con Fal.ai (ni fotos/recortes PNG estáticos) en esta serie.
+- **Construcción TSX/SVG estilizada de alta calidad:** Todos los personajes, criaturas, objetos narrativos y escenarios deben construirse en **TSX/SVG estilizado de alta complejidad**:
+  - Mínimo **20 a 35+ trazos `<path>` orgánicos** por personaje (curvas Bézier, pliegues de ropa, mechones de cabello, rasgos faciales/anatómicos — jamás primitivas geométricas rígidas simples).
+  - Iluminación cinematográfica en al menos **3 capas de profundidad**: sombras profundas base, degradados `<linearGradient>` / `<radialGradient>`, y luz de borde (*rim light*) coherente con el escenario.
+  - **Articulación real en grupos `<g>` independientes y animados** con `useCurrentFrame()` / `interpolate()` / `Math.sin()`: respiración del torso, inclinación de cabeza, parpadeo o brillo sutil en pupilas, movimiento de manos, mechones de cabello y tentáculos.
 - **Capas visuales obligatorias (de fondo a frente):**
-  1. **Cielo / Vacío nocturno:** Gradiente radial profundo con viñeta agresiva en bordes.
-  2. **Plano Z lejano (Bosque/Escenario distante):** Siluetas difuminadas con desplazamiento lento (`0.15×` de la cámara) y baja opacidad.
-  3. **Neblina atmosférica trasera:** Capas SVG/radiales animadas horizontalmente con `useCurrentFrame()` y `Math.sin()`.
-  4. **Plano Z medio (Entorno + Personaje):** Árboles/arquitectura intermedia (`0.45×`) y la silueta vectorial SVG del personaje con animación procedural (respiración, tentáculos dinámicos con curvas Bézier, aparición progresiva, glitches de teletransporte).
-  5. **Plano Z cercano (Primer plano):** Ramas/troncos desenfocados en los laterales (`1.0×`) que acentúan el efecto de profundidad 2.5D.
-  6. **Neblina frontal + partículas / esporas:** Bruma tenue en movimiento continuo.
-  7. **HUD y Tipografía Cinética:** Títulos de acto, artefactos de archivo paranormal (fechas, registros de foro, señal perdida) y subtítulos palabra por palabra.
-  8. **Post-procesado VHS:** Grano de cinta animado determinista, líneas de escaneo (`scanlines`), aberración cromática sutil (desplazamiento RGB cian/rojo en picos de tensión), parpadeo de tracking y cortes con estática VHS entre actos.
+  1. **Fondo atmosférico 2.5D:** Gradientes profundos y arquitectura/paisaje en perspectiva vectorial con paralaje lento (`0.15×–0.35×`).
+  2. **Neblina atmosférica trasera:** Capas radiales/SVG animadas horizontalmente de forma continua.
+  3. **Plano Z medio (Escenario + Personajes articulados):** Personajes y entidades SVG/TSX actuando en la escena (escribiendo, reaccionando, acechando, enfrentándose) con movimiento independiente.
+  4. **Plano Z cercano (Primer plano):** Marcos/siluetas desenfocadas en los bordes (`1.0×`) que acentúan la profundidad 2.5D.
+  5. **Polvo / esporas / partículas atmosféricas:** Motas iluminadas por la fuente de luz de cada escena.
+  6. **HUD y Tipografía Cinética:** Tarjetas glassmorphism limpias, expedientes y subtítulos palabra por palabra dentro de Zona Segura.
+  7. **Post-procesado VHS:** Grano determinista (`feTurbulence`), líneas de escaneo horizontales, aberración cromática puntual en cortes y viñeta perimetral.
 
 ---
 
@@ -25,14 +28,14 @@ Guía maestra reutilizable para producir **YouTube Shorts verticales (1080×1920
 | Token | Hex | Uso principal |
 | :--- | :--- | :--- |
 | `--bg-void` | `#040507` | Fondo base, sombras absolutas, viñeta |
-| `--bg-forest-deep` | `#0A1014` | Cielo nocturno y capas lejanas del bosque |
+| `--bg-forest-deep` | `#0A1014` | Cielo nocturno y capas lejanas |
 | `--bg-mist-slate` | `#162129` | Planos medios, neblina fría, siluetas secundarias |
 | `--fog-cold` | `#2B3A42` | Bruma iluminada por luna fría y reflejos tenues |
 | `--text-bone` | `#F2EFE9` | Subtítulos base, títulos de alto contraste |
 | `--accent-blood` | `#DC2626` | Palabra activa / resaltado de tensión, alertas VHS `REC` |
 | `--accent-crimson-dark` | `#7F1D1D` | Resplandores inquietantes, sombras sangrientas |
 | `--accent-pale-yellow` | `#FDE047` | Resaltado alternativo de alto impacto (términos clave / CTA) |
-| `--vhs-cyan` | `#22D3EE` | Canal desplazado de aberración cromática |
+| `--vhs-cyan` | `#22D3EE` | Reflejos CRT / canal desplazado de aberración cromática |
 | `--vhs-magenta` | `#F43F5E` | Canal opuesto de aberración cromática |
 
 ---
@@ -49,49 +52,40 @@ Sobre un lienzo de **`1080 × 1920` px**, la interfaz móvil de YouTube Shorts c
 | **Respiro izquierdo recomendado** | `6%` izquierdo | `x: 0px – 64px` | Seguridad de bordes curvos en móviles |
 
 - **Caja Segura Activa:** `x: [64px, 918px]` (`ancho útil = 854px`), `y: [288px, 1440px]` (`alto útil = 1152px`).
-- **Posición de Subtítulos Cinéticos:** A **`~66%` de altura** (`y ≈ 1240px–1300px`), siempre por encima de `1440px`, perfectamente centrados en el eje horizontal (`left: 0`, `right: 0`, `width: '100%'`, `display: 'flex'`, `justifyContent: 'center'`, `textAlign: 'center'`) con márgenes laterales seguros (`paddingInline: 90px`) para no chocar jamás con la columna derecha de iconos.
-- **Elementos de fondo (bosque, niebla, grano VHS, viñeta):** Sí ocupan el `100%` del lienzo `1080×1920` a sangre completa.
+- **Posición de Subtítulos Cinéticos:** A **`~66%` de altura** (`y ≈ 1235px–1300px`), siempre por encima de `1440px`, perfectamente centrados en el eje horizontal (`left: 0`, `right: 0`, `width: '100%'`, `display: 'flex'`, `justifyContent: 'center'`, `textAlign: 'center'`) con márgenes laterales seguros (`paddingInline: 90px`) para no chocar jamás con la columna derecha de iconos.
+- **Elementos de fondo (escenarios, niebla, grano VHS, viñeta):** Ocupan el `100%` del lienzo `1080×1920` a sangre completa.
 
 ---
 
-## 4. Estructura Modular de Escenas (Reutilizable)
+## 4. Delegación Obligatoria a OpenCode y Estructura Modular
 
-El proyecto sigue una arquitectura desacoplada para clonar y sustituir fácilmente el personaje, guion y audio en futuros episodios:
+- **Delegación obligatoria a OpenCode (`opencode run`):** Antigravity actúa **únicamente como coordinador, productor de audio y auditor visual**. Antigravity **nunca crea ni edita código dentro de `src/` directamente**; toda la implementación en Remotion/TSX/SVG y actualizaciones de `src/` se delegan obligatoriamente a **OpenCode (DeepSeek V4 Pro)** mediante `opencode run` desde la terminal.
 
 ```text
-├── AGENTS.md                        # Esta guía de estilo y arquitectura
+├── AGENTS.md                        # Esta guía permanente de estilo y gobernanza
 ├── public/
-│   ├── art/                         # Activos 2.5D generados con Fal.ai (fondos 9:16 + PNGs recortados)
-│   ├── narracion.mp3                # Locución principal (ElevenLabs)
+│   ├── narracion.mp3                # Locución principal (ElevenLabs MCP)
 │   ├── musica_terror.mp3            # Música dark ambient (duración narración + 2s)
 │   └── sfx/
+│       ├── knife_scrape.mp3         # Foley atmosférico del episodio
 │       ├── vhs_glitch.mp3           # Estática/interferencia en transiciones
-│       ├── deep_boom.mp3            # Golpe subgrave en revelaciones clave
-│       └── forest_wind.mp3          # Ambiente de viento/bosque en apertura/cierre
+│       └── deep_boom.mp3            # Golpe subgrave único en revelaciones clave
 └── src/
     ├── Root.tsx                     # Registro de composición 1080x1920 @ 30fps con duración dinámica
-    ├── MainComposition.tsx          # Orquestador maestro de actos, audio y capas globales
+    ├── MainComposition.tsx          # Orquestador maestro de escenas, transiciones, audio y capas globales
     ├── data/
-    │   ├── episodeConfig.ts         # Metadatos del personaje, duración exacta y límites de los 4 actos
+    │   ├── episodeConfig.ts         # Metadatos del episodio, duración exacta y límites de escenas
     │   └── transcript.ts            # Tiempos exactos palabra por palabra (start/end en segundos)
     ├── components/
-    │   ├── ForestParallax25D.tsx    # Escenario 2.5D multi-capa (árboles Z, niebla, cámara lenta)
-    │   ├── CharacterSilhouette.tsx  # Silueta SVG animada del personaje (ej. Slenderman + tentáculos)
-    │   ├── VhsPostProcess.tsx       # Grano determinista, scanlines, aberración cromática y glitch
+    │   ├── Atmosphere25D.tsx        # Neblina orgánica, esporas/polvo y viñeta frontal 2.5D
+    │   ├── SafeZone.tsx             # Contenedor centrado estricto (paddingInline: 90)
+    │   ├── SceneTransitions.tsx     # Transiciones VHS, whip-pan y corte subgrave
+    │   ├── VhsPostProcess.tsx       # Grano determinista, scanlines, aberración puntual y HUD
     │   ├── KineticSubtitles.tsx     # Subtítulos palabra por palabra dentro de la zona segura (~66%)
     │   └── AudioMaster.tsx          # Mezcla: narración (1.0), música con ducking (0.12↔0.35), SFX
     └── scenes/
-        ├── Act1Hook.tsx             # Acto 1 (~0–5s): Gancho atmosférico e impacto inicial
-        ├── Act2Origin.tsx           # Acto 2 (~5–22s): Origen real, archivo visual y viralización
-        ├── Act3Abilities.tsx        # Acto 3 (~22–40s): Poderes, distorsión y síntomas del ente
-        └── Act4Outro.tsx            # Acto 4 (~40–50s+): Cierre perturbador y CTA de comentarios
+        └── *.tsx                    # Escenas 2.5D vectoriales articuladas del episodio
 ```
-
-### Cómo adaptar esta plantilla a otra Creepypasta
-1. Reemplaza los audios en `public/` (`narracion.mp3`, `musica_terror.mp3`, `sfx/`).
-2. Genera con Python + `fal_client` (`FAL_KEY`) los fondos verticales 9:16 (`fal-ai/flux/dev`) y recortes PNG transparentes (`fal-ai/flux/dev` + `fal-ai/birefnet/v2`) en `public/art/`.
-3. Actualiza `src/data/episodeConfig.ts` y `src/data/transcript.ts` con los nuevos tiempos palabra por palabra y la nueva duración total (`ceil(audioDurationSec * 30) + 45` frames).
-4. Monta cada sub-escena en `src/scenes/` en capas 2.5D independientes respetando Zonas Seguras, centrado estricto y cinematografía variada.
 
 ---
 
@@ -100,42 +94,24 @@ El proyecto sigue una arquitectura desacoplada para clonar y sustituir fácilmen
 - **Duración dinámica:** `durationInFrames = Math.ceil(narrationDurationSeconds * 30) + 45` (45 frames = 1.5 s de cierre atmosférico).
 - **Mezcla de audio con Ducking:**
   - `narracion.mp3`: volumen constante `1.0`.
-  - `musica_terror.mp3`: volumen controlado mediante `interpolate()` (y detección de pausas del transcript): `0.12` durante segmentos con voz activa y subida suave a `0.35` en pausas dramáticas y en el cierre final.
-  - `sfx/`: integrados con `<Sequence>` y `<Audio>` en los cortes de acto, impactos y atmósfera inicial.
-- **Animación 100% determinista:** Todas las animaciones deben derivar exclusivamente de `useCurrentFrame()`, `useVideoConfig()`, `interpolate()`, `spring()` y `random(seed)` de Remotion. Prohibido usar `Math.random()`, `setTimeout` o transiciones CSS no sincronizadas.
+  - `musica_terror.mp3`: volumen controlado mediante `interpolate()` + pausas del transcript: `0.12` durante voz activa y subida suave a `0.35` en pausas dramáticas y en el cierre final, con fundido limpio a `0.0` al terminar.
+  - `sfx/`: integrados con `<Sequence>` y `<Audio>` en los cortes de escena e impactos puntuales.
+- **Animación 100% determinista:** Todas las animaciones derivan exclusivamente de `useCurrentFrame()`, `useVideoConfig()`, `interpolate()`, `spring()` y `random(seed)` de Remotion. Prohibido usar `Math.random()`, `setTimeout` o transiciones CSS no sincronizadas.
 - **Rutas con espacios (Windows):** Encerrar siempre las rutas entre comillas dobles en comandos CLI (`"C:\Creepypastas IA\video-slenderman"`).
-- **Verificación visual obligatoria:** Antes de renderizar el MP4 final, exportar 4 capturas PNG con `npx remotion still` (una por acto) en `.preview/` y auditar zonas seguras, contraste tipográfico y estética 2.5D.
+- **Verificación visual obligatoria:** Antes de renderizar el MP4 final, exportar 4 capturas PNG con `npx remotion still` (una por escena) en `.preview/`, auditarlas multimodalmente (articulación, detalle vectorial, zonas seguras, contraste), eliminar `.preview/` y verificar `npx tsc --noEmit`.
 
 ---
 
-## 6. Reglas Obligatorias de Dirección Visual, Arte 2.5D con Fal.ai y Cinematografía (Futuros Episodios)
-
-Estas 5 reglas aplican de forma **estricta y obligatoria** para todos los futuros Shorts de creepypastas generados con esta plantilla:
+## 6. Reglas Permanentes de Dirección Visual y Dinamismo Sin *Shake* Periódico
 
 1. **Centrado estricto de textos y subtítulos:**
-   - Todos los títulos en pantalla y subtítulos dinámicos palabra por palabra deben estar **perfectamente centrados en el eje horizontal** usando:
-     - `left: 0`, `right: 0`, `width: '100%'`, `display: 'flex'`, `justifyContent: 'center'`, `textAlign: 'center'`
-   - Mantener siempre márgenes laterales seguros (`paddingInline: 90px`) para evitar que cualquier texto o píldora de subtítulo choque con la columna derecha de iconos de YouTube Shorts o los bordes del lienzo.
-
-2. **Narrativa multi-escena en 2.5D (prohibido usar un solo fondo estático):**
-   - Está prohibido mantener un único escenario o fondo repetitivo durante todo el video.
-   - Cada vez que el guion cambie de subtema o idea, el video debe ejecutar una **transición dinámica** (corte con interferencia VHS, barrido rápido / *whip-pan* o cambio de plano) hacia un **escenario 2.5D distinto** acorde con lo narrado.
-   - Incluir **personajes / siluetas humanas viviendo la situación narrada** en cada entorno: por ejemplo, personas experimentando el suceso en el lugar, alguien escribiendo o investigando la historia frente a una computadora en penumbra, rumores y archivos propagándose en foros/redes, etc.
-
-3. **Arte e ilustraciones en capas 2.5D vía Fal.ai (`FAL_KEY`):**
-   - **Prohibido** usar dibujos vectoriales SVG simples o geométricos para personajes, criaturas, manos o fondos principales.
-   - Antes de programar las escenas en Remotion, ejecutar un script en Python usando `fal_client` (leyendo `FAL_KEY` desde las variables de entorno del sistema, nunca dentro del repositorio Git) para generar los activos visuales de cada escena en `public/art/`:
-     - **Fondos atmosféricos verticales (`9:16`):** generados con `fal-ai/flux/dev` (estilo terror psicológico, iluminación cinematográfica oscura, textura granulada, **sin texto incrustado**).
-     - **Personajes, criaturas u objetos clave:** generados con `fal-ai/flux/dev` sobre fondo liso y recortados automáticamente en **PNG transparente** mediante `fal-ai/birefnet/v2`.
-   - En Remotion, montar cada escena en **capas 2.5D separadas**: fondo lejano, niebla/partículas intermedias, personaje/criatura recortado en PNG con movimiento independiente y elementos de primer plano.
-
-4. **Alta complejidad visual cuando se usen elementos SVG auxiliares (HUD, marcos, siluetas secundarias):**
-   - Ningún elemento gráfico protagonista ni silueta/objeto principal dibujado en SVG puede construirse con primitivas rígidas simples (rectángulos, óvalos o semicírculos básicos; mínimo **15–25 elementos SVG estructurados** con curvas Bézier `<path>` orgánicas, articulaciones/rasgos anatómicos y al menos **3 capas de profundidad**: sombra base, gradiente y *rim light*).
-   - Los escenarios deben conservar riqueza de detalles secundarios (cables, reflejos en pantallas, marcos, vetas, partículas atmosféricas y animaciones secundarias vivas como parpadeo de monitores o neblina en movimiento) para evitar fondos vacíos.
-
-5. **Cinematografía variada y prohibición de efectos periódicos (cero *shake/zoom* repetitivo):**
-   - Queda **estrictamente prohibido** programar bucles periódicos o temporizadores fijos (`frame % N`) que disparen sacudidas (*shake*) o pulsos de zoom cada pocos segundos a lo largo del video.
-   - Cada escena debe tener **una única intención de cámara** distinta a la anterior, suave y motivada por la narrativa:
-     - *Ejemplo:* Escena 1 *dolly-in* lento y estable sin temblor; Escena 2 desplazamiento lateral (*pan*) suave; Escena 3 avance progresivo en eje Z; Escena 4 leve balanceo orgánico tipo linterna en mano de baja frecuencia; Escena 5 plano fijo tenso con *push-in* gradual.
-   - Los efectos de impacto o micro-sacudida (`shake`) solo pueden usarse **1 o 2 veces en todo el Short**, exclusivamente sincronizados con un evento sonoro puntual (un susto, un golpe grave o un flash) y nunca de forma repetitiva.
-
+   - Todos los títulos, tarjetas glassmorphism, expedientes y subtítulos palabra por palabra deben centrarse estrictamente en el eje horizontal (`left: 0`, `right: 0`, `width: '100%'`, `display: 'flex'`, `justifyContent: 'center'`, `textAlign: 'center'`, `paddingInline: 90`).
+2. **Dinamismo real entre escenas (cero poses repetidas):**
+   - Cada escena debe representar una **situación narrativa distinta con personajes articulados actuando** (investigando en un CRT con manos escribiendo, creador reaccionando a un jumpscare, intruso acechando tras una ventana mientras alguien duerme, duelo cara a cara con entidades animadas).
+   - Queda prohibido reutilizar la misma pose o el mismo fondo estático entre escenas.
+3. **Estilo Vectorial Oscuro Articulado en 2.5D (cero Fal.ai fotorrealista):**
+   - Cada personaje principal o entidad debe tener **20 a 35+ trazos `<path>` orgánicos**, degradados `<linearGradient>` / `<radialGradient>`, sombras profundas, *rim light* y grupos `<g>` independientes animados (torso/respiración, cabeza, pupilas/parpadeo, manos/cabello/tentáculos).
+4. **Una única intención de cámara suave por escena (prohibido *shake/zoom* periódico):**
+   - Queda **estrictamente prohibido** usar bucles periódicos o temporizadores (`frame % N`) que disparen sacudidas (*shake*) o pulsos de zoom repetitivos.
+   - Cada escena usa una única intención de cámara distinta y motivada (ej. *dolly-in* lento y continuo, *pan* lateral suave, avance progresivo lento en eje Z, plano dramático con empuje sutil).
+   - Un micro-impacto puntual solo se permite **1 o 2 veces en todo el Short**, exclusivamente sincronizado con un golpe sonoro como `deep_boom.mp3`.

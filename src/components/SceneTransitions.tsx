@@ -4,9 +4,9 @@ import { SCENES } from "../data/episodeConfig";
 
 /**
  * SceneTransitions — Transiciones motivadas entre las 4 escenas de Jeff the Killer:
- *  - Escena 1 → 2 (frame 436): corte con interferencia / desgarro de estática VHS.
- *  - Escena 2 → 3 (frame 896): barrido rápido (whip-pan) con estela de movimiento.
- *  - Escena 3 → 4 (frame 1296): corte directo con un único golpe subgrave (deep_boom.mp3)
+ *  - Escena 1 → 2 (frame 395): corte con interferencia / desgarro de estática VHS.
+ *  - Escena 2 → 3 (frame 911): barrido rápido (whip-pan) con estela de movimiento.
+ *  - Escena 3 → 4 (frame 1278): corte directo con un único golpe subgrave (deep_boom.mp3)
  *    y breve destello carmesí de 8 frames.
  */
 

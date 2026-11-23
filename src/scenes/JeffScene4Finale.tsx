@@ -2,10 +2,8 @@ import React from "react";
 import {
   AbsoluteFill,
   Easing,
-  Img,
   interpolate,
   spring,
-  staticFile,
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
@@ -15,39 +13,39 @@ import {
   MistLayer,
 } from "../components/Atmosphere25D";
 import { FONT_MONO, FONT_SANS, SafeCentered } from "../components/SafeZone";
+import { JeffCharacter } from "../components/characters/JeffCharacter";
+import { SlenderCharacter } from "../components/characters/SlenderCharacter";
 import { SCENES } from "../data/episodeConfig";
 
 /**
- * JeffScene4Faceoff (frames 1296–1501, duración 205 frames, 43.20–50.03s)
+ * JeffScene4Finale (frames 1278–1477 · 42.60–49.23s)
  * Cierre y debate — Cara a cara final: Jeff vs Slenderman.
  *
- * Capas 2.5D reales:
- *  1. Vacío nocturno con iluminación opuesta (carmesí izquierda / azul frío derecha)
- *  2. Neblina y cenizas flotando entre ambos contendientes
- *  3. Cara a cara en capas PNG recortadas con movimiento independiente:
- *       · Izquierda: public/art/char_jeff_shadow.png
- *       · Derecha:   public/art/char_slender_vs.png
- *  4. Texto cinético perfectamente centrado en zona segura:
- *       "¿EQUIPO JEFF O EQUIPO SLENDERMAN?"
- *  5. Viñeta frontal
+ * Capas 2.5D reales (cero <Img>):
+ *  1. Vacío nocturno en alto contraste (rojo carmesí izquierda / azul frío derecha).
+ *  2. Neblina y cenizas flotando entre ambos contendientes.
+ *  3. JeffCharacter (izquierda, rim carmesí) y SlenderCharacter (derecha,
+ *     tentáculos ondulando, rim azul) con respiración leve y rim light pulsante.
+ *  4. Texto cinético centrado en SafeCentered top=356:
+ *     "¿EQUIPO JEFF O EQUIPO SLENDERMAN?" + píldora CTA "COMENTA TU BANDO ABAJO".
+ *  5. Viñeta frontal.
  *
  * Movimiento de cámara único:
- *  - Un único micro-impacto en los primeros 10 frames sincronizado exclusivamente
- *    con el golpe subgrave (deep_boom.mp3), seguido de plano fijo tenso con
- *    push-in muy suave y estable (cero bucles periódicos).
+ *  - Un único micro-impacto en frames 0–10 sincronizado con deep_boom.mp3
+ *    (decay limpio, cero repeticiones), seguido de empuje sutil estable.
  */
 
 const SCENE_LEN = SCENES.scene4.end - SCENES.scene4.start;
 
-export const JeffScene4Faceoff: React.FC = () => {
+export const JeffScene4Finale: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const progress = Math.min(1, Math.max(0, frame / SCENE_LEN));
 
-  // Único golpe de micro-impacto en toda la composición, sincronizado a deep_boom.mp3 (frames 0–10)
+  // Único golpe de micro-impacto en toda la composición (frames 0–10).
   const hitDecay =
     frame <= 10
-      ? interpolate(frame, [0, 2, 10], [1, 0.75, 0], {
+      ? interpolate(frame, [0, 2, 10], [1, 0.72, 0], {
           extrapolateLeft: "clamp",
           extrapolateRight: "clamp",
         })
@@ -55,18 +53,22 @@ export const JeffScene4Faceoff: React.FC = () => {
   const hitX = hitDecay * Math.sin(frame * 2.1) * 7;
   const hitY = hitDecay * Math.cos(frame * 1.9) * 5;
 
-  // Plano fijo tenso con push-in muy sutil y estable
-  const cameraScale = interpolate(progress, [0, 1], [1.01, 1.055], {
+  // Empuje sutil estable tras el impacto.
+  const cameraScale = interpolate(progress, [0, 1], [1.02, 1.06], {
     easing: Easing.out(Easing.quad),
   });
 
-  // Acercamiento lento en capas opuestas
-  const jeffShiftX = interpolate(progress, [0, 1], [-22, 10]);
-  const slenderShiftX = interpolate(progress, [0, 1], [22, -10]);
-  const jeffBreath = Math.sin(frame * 0.03) * 4;
+  // Acercamiento lento en capas opuestas.
+  const jeffShiftX = interpolate(progress, [0, 1], [-24, 12]);
+  const slenderShiftX = interpolate(progress, [0, 1], [24, -12]);
+  const jeffBreath = Math.sin(frame * 0.03) * 5;
   const slenderBreath = Math.cos(frame * 0.026) * 4;
 
-  // Entrada cinética de la pregunta final
+  // Rim light pulsante suave (baja amplitud, sin loops de shake).
+  const jeffRimPulse = 0.7 + 0.22 * Math.max(0, Math.sin(frame * 0.06));
+  const slenderRimPulse = 0.7 + 0.22 * Math.max(0, Math.sin(frame * 0.05 + 1.4));
+
+  // Entrada cinética de la pregunta final.
   const questionSpring = spring({
     frame: Math.max(0, frame - 6),
     fps,
@@ -78,12 +80,12 @@ export const JeffScene4Faceoff: React.FC = () => {
     extrapolateRight: "clamp",
   });
 
-  // Realce sutil cuando pronuncia "equipo Jeff" (~local 100) y "equipo Slenderman" (~local 134)
-  const jeffCallout = interpolate(frame, [94, 104, 120, 130], [0, 1, 1, 0.2], {
+  // Realce al pronunciar "equipo Jeff" (~local 87) y "equipo Slenderman" (~local 120).
+  const jeffCallout = interpolate(frame, [82, 92, 108, 118], [0, 1, 1, 0.2], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const slenderCallout = interpolate(frame, [126, 138, 165, 190], [0, 1, 1, 0.3], {
+  const slenderCallout = interpolate(frame, [112, 124, 150, 175], [0, 1, 1, 0.3], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
@@ -100,18 +102,18 @@ export const JeffScene4Faceoff: React.FC = () => {
         <AbsoluteFill
           style={{
             background:
-              "radial-gradient(ellipse at 24% 58%, rgba(127, 29, 29, 0.34) 0%, transparent 52%), radial-gradient(ellipse at 78% 54%, rgba(30, 64, 88, 0.34) 0%, transparent 52%), linear-gradient(180deg, #040508 0%, #090D13 52%, #030406 100%)",
+              "radial-gradient(ellipse at 22% 58%, rgba(127, 29, 29, 0.42) 0%, transparent 54%), radial-gradient(ellipse at 80% 54%, rgba(30, 64, 88, 0.42) 0%, transparent 54%), linear-gradient(180deg, #040508 0%, #090D13 52%, #030406 100%)",
           }}
         />
 
-        {/* Línea divisoria vertical atmosférica muy sutil */}
+        {/* Línea divisoria vertical atmosférica */}
         <div
           style={{
             position: "absolute",
-            top: 560,
+            top: 540,
             left: "50%",
             width: 2,
-            height: 760,
+            height: 820,
             marginLeft: -1,
             background:
               "linear-gradient(180deg, transparent 0%, rgba(242,239,233,0.16) 45%, rgba(220,38,38,0.28) 65%, transparent 100%)",
@@ -121,22 +123,25 @@ export const JeffScene4Faceoff: React.FC = () => {
 
         {/* 2. Neblina envolvente */}
         <MistLayer
-          tint="rgba(128, 152, 174, 0.14)"
+          tint="rgba(128, 152, 174, 0.15)"
           opacity={0.9}
           speed={0.45}
           yOffset={110}
           seed={55}
         />
 
-        {/* 3A. Contendiente Izquierda: Jeff the Killer */}
+        {/* 3A. Contendiente Izquierda: Jeff the Killer (rim carmesí) */}
         <div
           style={{
             position: "absolute",
-            top: 635,
-            left: -58,
-            width: 615,
-            height: 790,
-            transform: `translate(${jeffShiftX}px, ${jeffBreath}px) scale(${1 + jeffCallout * 0.025})`,
+            top: 665,
+            left: -90,
+            width: 620,
+            height: 768,
+            opacity: 1,
+            transform: `translate(${jeffShiftX}px, ${jeffBreath}px) scale(${
+              1 + jeffCallout * 0.03
+            })`,
             transformOrigin: "48% 45%",
             WebkitMaskImage:
               "linear-gradient(to bottom, black 0%, black 70%, rgba(0,0,0,0.4) 88%, transparent 98%)",
@@ -144,26 +149,30 @@ export const JeffScene4Faceoff: React.FC = () => {
               "linear-gradient(to bottom, black 0%, black 70%, rgba(0,0,0,0.4) 88%, transparent 98%)",
           }}
         >
-          <Img
-            src={staticFile("art/char_jeff_shadow.png")}
+          <JeffCharacter
+            width={620}
+            rimColor="#DC2626"
+            crimsonAccent={0.75 + jeffCallout * 0.2}
+            headTiltBoost={-1}
             style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "contain",
-              filter: `brightness(${0.86 + jeffCallout * 0.1}) contrast(1.16) saturate(0.84) drop-shadow(0 24px 48px rgba(0,0,0,0.94)) drop-shadow(-10px 0 26px rgba(220,38,38,${0.28 + jeffCallout * 0.25}))`,
+              filter: `brightness(${0.9 + jeffRimPulse * 0.12}) drop-shadow(-10px 0 30px rgba(220,38,38,${
+                0.24 + jeffCallout * 0.3
+              }))`,
             }}
           />
         </div>
 
-        {/* 3B. Contendiente Derecha: Slenderman */}
+        {/* 3B. Contendiente Derecha: Slenderman (tentáculos, rim azul) */}
         <div
           style={{
             position: "absolute",
-            top: 608,
-            right: -56,
-            width: 605,
-            height: 790,
-            transform: `translate(${slenderShiftX}px, ${slenderBreath}px) scale(${1 + slenderCallout * 0.025})`,
+            top: 660,
+            right: -96,
+            width: 620,
+            height: 755,
+            transform: `translate(${slenderShiftX}px, ${slenderBreath}px) scale(${
+              1 + slenderCallout * 0.03
+            })`,
             transformOrigin: "52% 45%",
             WebkitMaskImage:
               "linear-gradient(to bottom, black 0%, black 70%, rgba(0,0,0,0.4) 88%, transparent 98%)",
@@ -171,13 +180,15 @@ export const JeffScene4Faceoff: React.FC = () => {
               "linear-gradient(to bottom, black 0%, black 70%, rgba(0,0,0,0.4) 88%, transparent 98%)",
           }}
         >
-          <Img
-            src={staticFile("art/char_slender_vs.png")}
+          <SlenderCharacter
+            width={620}
+            rimColor="#38BDF8"
+            tentacleIntensity={1.1}
+            headTiltBoost={1}
             style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "contain",
-              filter: `brightness(${0.9 + slenderCallout * 0.1}) contrast(1.18) drop-shadow(0 24px 48px rgba(0,0,0,0.94)) drop-shadow(10px 0 26px rgba(148,210,238,${0.26 + slenderCallout * 0.24}))`,
+              filter: `brightness(${0.92 + slenderRimPulse * 0.1}) drop-shadow(10px 0 30px rgba(148,210,238,${
+                0.24 + slenderCallout * 0.28
+              }))`,
             }}
           />
         </div>
@@ -201,8 +212,8 @@ export const JeffScene4Faceoff: React.FC = () => {
         bottomDarkness={0.9}
       />
 
-      {/* 6. Texto cinético perfectamente centrado dentro de zona segura (top 360) */}
-      <SafeCentered top={360} zIndex={12}>
+      {/* 6. Texto cinético centrado dentro de zona segura (top 356) */}
+      <SafeCentered top={356} zIndex={12}>
         <div
           style={{
             display: "inline-block",
