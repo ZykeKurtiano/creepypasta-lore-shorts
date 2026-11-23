@@ -11,16 +11,18 @@ import {
 /**
  * AudioMaster — Mezcla de audio del episodio (Zalgo):
  *  - narracion.mp3 al volumen 1.0 constante,
- *  - musica_terror.mp3 con ducking: 0.12 con voz activa, subida suave a
- *    0.35 en pausas (>= 0.40s) y en el cierre final, con fundido limpio a
- *    0.0 en los últimos 20 frames,
- *  - SFX con <Sequence> + <Audio> en cortes e impactos puntuales.
+ *  - musica_terror.mp3 en loop continuo hasta el último frame (TOTAL_FRAMES),
+ *    con ducking suave: 0.28 con voz activa, subida a 0.52 en pausas
+ *    dramáticas (>= 0.38s) y en el clímax/cierre final, con fundido limpio a
+ *    0.0 en los últimos 25 frames,
+ *  - SFX (ink_glitch, wall_shatter, light_pulse, deep_boom) con
+ *    <Sequence> + <Audio> sincronizados con las 6 escenas.
  */
 
-const MUSIC_VOICE = 0.12;
-const MUSIC_PAUSE = 0.35;
-const MIN_PAUSE_SEC = 0.4;
-const FINAL_FADE_START = TOTAL_FRAMES - 20;
+const MUSIC_VOICE = 0.28;
+const MUSIC_PAUSE = 0.52;
+const MIN_PAUSE_SEC = 0.38;
+const FINAL_FADE_START = TOTAL_FRAMES - 25;
 const FINAL_FADE_END = TOTAL_FRAMES;
 
 const LAST_WORD_END = TRANSCRIPT_WORDS.reduce(
@@ -87,7 +89,7 @@ const SMOOTHED_TARGETS: number[] = (() => {
 
 /**
  * Volumen de la música para un frame dado.
- * Ducking 0.12 (voz) ↔ 0.35 (pausas y cierre), fundido final a 0.0.
+ * Ducking 0.28 (voz) ↔ 0.52 (pausas y clímax/cierre), fundido final a 0.0.
  */
 export const computeDuckedMusicVolume = (
   frame: number,
@@ -116,29 +118,45 @@ export const AudioMaster: React.FC = () => {
       {/* Locución principal */}
       <Audio src={staticFile("narracion.mp3")} volume={1.0} />
 
-      {/* Música dark ambient con ducking */}
+      {/* Música dark ambient con ducking, en loop hasta el último frame */}
       <Audio
         src={staticFile("musica_terror.mp3")}
+        loop
         volume={(f) => computeDuckedMusicVolume(f)}
       />
 
-      {/* SFX: ink_glitch — corrupción de la viñeta (Escena 1) */}
-      <Sequence from={390} durationInFrames={70}>
-        <Audio src={staticFile("sfx/ink_glitch.mp3")} volume={0.42} />
+      {/* SFX: ink_glitch — el virus corrompe los cómics (Escena 2) */}
+      <Sequence from={SCENES.scene2.start + 270} durationInFrames={70}>
+        <Audio src={staticFile("sfx/ink_glitch.mp3")} volume={0.44} />
       </Sequence>
 
-      {/* SFX: ink_glitch — camera dive (Escena 1 → 2) */}
-      <Sequence from={SCENES.scene2.start - 12} durationInFrames={55}>
-        <Audio src={staticFile("sfx/ink_glitch.mp3")} volume={0.32} />
+      {/* SFX: ink_glitch — camera dive (Escena 2 → 3) */}
+      <Sequence from={SCENES.scene3.start - 14} durationInFrames={55}>
+        <Audio src={staticFile("sfx/ink_glitch.mp3")} volume={0.34} />
       </Sequence>
 
-      {/* SFX: wall_shatter — romperse el muro dimensional (Escena 2) */}
-      <Sequence from={SCENES.scene2.start + 97} durationInFrames={98}>
+      {/* SFX: wall_shatter — revelación de Zalgo en el Palacio de Cristal Torturado (Escena 3) */}
+      <Sequence from={SCENES.scene3.start + 90} durationInFrames={98}>
         <Audio src={staticFile("sfx/wall_shatter.mp3")} volume={0.62} />
       </Sequence>
 
-      {/* SFX: deep_boom — colapso hacia el cara a cara final (Escena 4) */}
-      <Sequence from={SCENES.scene4.start - 2} durationInFrames={105}>
+      {/* SFX: light_pulse — revelación de los Niños de Luz (Escena 4) */}
+      <Sequence from={SCENES.scene4.start + 75} durationInFrames={85}>
+        <Audio src={staticFile("sfx/light_pulse.mp3")} volume={0.55} />
+      </Sequence>
+
+      {/* SFX: light_pulse — rescate de Slenderman (Escena 5) */}
+      <Sequence from={SCENES.scene5.start + 210} durationInFrames={85}>
+        <Audio src={staticFile("sfx/light_pulse.mp3")} volume={0.46} />
+      </Sequence>
+
+      {/* SFX: deep_boom — inicio de la revelación de Zalgo (Escena 1) */}
+      <Sequence from={350} durationInFrames={85}>
+        <Audio src={staticFile("sfx/deep_boom.mp3")} volume={0.48} />
+      </Sequence>
+
+      {/* SFX: deep_boom — corte de alto contraste hacia Escena 6 */}
+      <Sequence from={SCENES.scene6.start - 2} durationInFrames={105}>
         <Audio src={staticFile("sfx/deep_boom.mp3")} volume={0.68} />
       </Sequence>
     </>

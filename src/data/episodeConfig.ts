@@ -1,8 +1,8 @@
 /**
- * episodeConfig.ts — Zalgo: El Que Espera Detrás Del Muro (2004)
+ * episodeConfig.ts — Zalgo, Slenderman y los Niños de Luz (Edición Extendida 90s)
  *
  * Metadatos maestros de la composición vectorial articulada 2.5D (Estándar v3):
- * duración dinámica, FPS y límites exactos de las 4 escenas.
+ * duración dinámica (~94.83 s), FPS y límites exactos de las 6 escenas.
  */
 
 export const COMP_ID = "ZalgoLoreShort";
@@ -11,29 +11,33 @@ export const FPS = 30;
 export const WIDTH = 1080;
 export const HEIGHT = 1920;
 
-export const NARRATION_DURATION_SEC = 53.629;
-export const MUSIC_DURATION_SEC = 55.629;
+export const NARRATION_DURATION_SEC = 93.309;
+export const MUSIC_DURATION_SEC = 95.033;
 
 /** 45 frames = 1.5 s de cierre atmosférico tras la locución. */
 export const OUTRO_HOLD_FRAMES = 45;
 
-/** ceil(53.629 * 30) + 45 = 1654 frames (~55.13 s). */
+/** ceil(93.309 * 30) + 45 = 2845 frames (~94.83 s). */
 export const TOTAL_FRAMES =
   Math.ceil(NARRATION_DURATION_SEC * FPS) + OUTRO_HOLD_FRAMES;
 
 /**
- * Límites exactos de las 4 escenas (frames globales @ 30 fps):
+ * Límites exactos de las 6 escenas (frames globales @ 30 fps):
  *
- * 1. Origen en Something Awful 2004 (Dave Kelly + viñeta corrupta) :    0 –  621 (0.00s – 20.70s)
- * 2. El que espera detrás del muro (Zalgo 7 bocas + estrella)      :  621 – 1080 (20.70s – 36.00s)
- * 3. Zalgo vs. Slenderman — Guerra de Proxies (split dinámico)     : 1080 – 1427 (36.00s – 47.57s)
- * 4. Cierre y Debate (¿Podría Slenderman detenerlo?)               : 1427 – 1654 (47.57s – 55.13s)
+ * 1. El Misterio de Slenderman (bosque + portal + niño)      :    0 –  380 (0.00s – 12.67s)
+ * 2. Origen 27 de julio de 2004 (Dave Kelly, SA -> 4chan)    :  380 –  908 (12.67s – 30.27s)
+ * 3. El Palacio de Cristal Torturado (Zalgo 4 brazos/7 bocas):  908 – 1649 (30.27s – 54.97s)
+ * 4. Los Niños de Luz (batería vital: artista y soldado)     : 1649 – 2106 (54.97s – 70.20s)
+ * 5. Cacería y Rescate en las Sombras (seguidores vs Slender): 2106 – 2589 (70.20s – 86.30s)
+ * 6. Caos vs. Protección (¿Caos o Protección?)               : 2589 – 2845 (86.30s – 94.83s)
  */
 export const SCENES = {
-  scene1: { start: 0, end: 621 },
-  scene2: { start: 621, end: 1080 },
-  scene3: { start: 1080, end: 1427 },
-  scene4: { start: 1427, end: TOTAL_FRAMES },
+  scene1: { start: 0, end: 380 },
+  scene2: { start: 380, end: 908 },
+  scene3: { start: 908, end: 1649 },
+  scene4: { start: 1649, end: 2106 },
+  scene5: { start: 2106, end: 2589 },
+  scene6: { start: 2589, end: TOTAL_FRAMES },
 } as const;
 
 /** Zona segura horizontal (YouTube Shorts): x útil [64, 918], centrado 540. */

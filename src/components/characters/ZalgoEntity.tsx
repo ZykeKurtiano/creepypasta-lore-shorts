@@ -4,16 +4,27 @@ import { useCurrentFrame } from "remotion";
 /**
  * ZalgoEntity.tsx — Entidad cósmica monumental en negro abisal (Estándar v3).
  *
- * Coloso eldritch humanoide de hombros amplios, angulosos y rasgados que se
- * estrechan hacia una cintura sombría y se funden hacia abajo en un manto
- * desgarrado de sombras y humo abisal que alcanza la base del viewBox (nunca
- * flotando como cápsula/huevo). Dos brazos articulados BIEN SEPARADOS a los
- * costados (pivotes anatómicos en los hombros externos) que en modo "cosmic"
- * se extienden hacia afuera y arriba sosteniendo en espacio abierto la vela
- * negra de sombras (izquierda) y la estrella muerta implosionando (derecha),
- * SIN tapar jamás el rostro ni la corona. 7 bocas eldritch orgánicas (no filas
- * de triángulos idénticos) con dientes curvos irregulares, brillo carmesí
- * interior y humo oscuro. Iluminación en 3 capas + rim light carmesí intenso.
+ * Mitología fiel: coloso eldritch SIN OJOS de piel azabache (#050508 / #0D0609)
+ * cuyo rostro liso oscuro se desgarra en 7 bocas orgánicas asimétricas:
+ *   1 gran mandíbula central (la "séptima" que canta la melodía apocalíptica
+ *   y brilla intensamente al hacerlo), 2 bocas laterales en las mejillas,
+ *   1 boca superior en la frente, 1 boca en la garganta y 2 bocas en las
+ *   clavículas/hombros.
+ *
+ * Corona de relámpagos negros (arcos fractales quebrados negro-azabache con
+ * borde luminoso carmesí sangre #DC2626 chisporroteando alrededor de la
+ * cabeza). CUATRO brazos articulados con esqueleto jerárquico `<g>` real:
+ *   - Brazo Derecho Superior  (upperRightShoulder -> forearm -> clawedHand):
+ *     extendido hacia afuera sosteniendo la estrella muerta implosionando.
+ *   - Brazo Derecho Inferior  (lowerRightShoulder -> forearm -> clawedHand):
+ *     extendido más abajo sosteniendo la vela negra cuya luz irradia oscuridad.
+ *   - Brazo Izquierdo Superior (upperLeftShoulder -> forearm -> clawedHand):
+ *     garra larga manchada de sangre carmesí goteante alzándose/lanzando sombras.
+ *   - Brazo Izquierdo Inferior (lowerLeftShoulder -> forearm -> clawedHand):
+ *     mano manchada de carmesí extendiéndose agresivamente o en guardia baja.
+ *
+ * Iluminación en 3 capas + rim light carmesí intenso. viewBox 0 0 960 980
+ * para que los 4 brazos extendidos quepan con holgura sin cortarse jamás.
  *
  * Animación 100% determinista: useCurrentFrame + interpolate + Math.sin.
  */
@@ -163,7 +174,7 @@ const ZalgoMouth: React.FC<{
 };
 
 // ---------------------------------------------------------------------------
-// Estrella muerta implosionando (modo cosmic)
+// Estrella muerta implosionando
 // ---------------------------------------------------------------------------
 const DeadStar: React.FC<{ power: number; pid: string; frame: number }> = ({
   power,
@@ -218,7 +229,7 @@ const DeadStar: React.FC<{ power: number; pid: string; frame: number }> = ({
 };
 
 // ---------------------------------------------------------------------------
-// Vela negra que irradia sombras / antiluz (modo cosmic)
+// Vela negra que irradia sombras / antiluz
 // ---------------------------------------------------------------------------
 const BlackCandle: React.FC<{ power: number; pid: string; frame: number }> = ({
   power,
@@ -317,21 +328,66 @@ const makeTendril = (
 };
 
 // ---------------------------------------------------------------------------
-// Brazo eldritch articulado (reutilizable) — cuelga hacia abajo en local
+// Relámpago negro quebrado (arco fractal) para la corona
+// ---------------------------------------------------------------------------
+const makeBolt = (seed: number, len: number): string => {
+  const segs = 5 + (seed % 3);
+  let d = "M 0 0";
+  for (let i = 1; i <= segs; i++) {
+    const t = i / segs;
+    const y = (-len * t).toFixed(1);
+    const jx = ((seed * 7 + i * 13) % 9) - 4;
+    const x = (i % 2 === 0 ? jx * 0.5 : jx) * (t * 2.2);
+    d += ` L ${x.toFixed(1)} ${y}`;
+  }
+  return d;
+};
+
+/** Corona de relámpagos negros: ángulos y longitudes deterministas. */
+const CROWN = Array.from({ length: 13 }, (_, i) => {
+  const angle = -150 + (i * 300) / 12;
+  const len = 92 + ((i * 37) % 54);
+  return { angle, len, d: makeBolt(i * 13 + 5, len) };
+});
+
+/** Chispas carmesí que chisporrotean alrededor de la corona. */
+const CROWN_SPARKS = Array.from({ length: 14 }, (_, i) => {
+  const angle = (-160 + (i * 320) / 13) * (Math.PI / 180);
+  const r = 128 + ((i * 31) % 46);
+  return {
+    x: Math.cos(angle) * r,
+    y: Math.sin(angle) * r - 46,
+    r: 1.6 + ((i * 7) % 4) * 0.9,
+    phase: i * 1.7,
+  };
+});
+
+// ---------------------------------------------------------------------------
+// Brazo eldritch articulado (reutilizable, jerarquía shoulder -> forearm -> hand)
 // ---------------------------------------------------------------------------
 const ZalgoArm: React.FC<{
   pid: string;
-  flip: boolean; // true = brazo derecho (espejo)
+  flip: boolean; // true = lado derecho visual (espejo)
   shoulder: number;
   elbow: number;
   mode: "cosmic" | "battle" | "finale";
   star: number;
   attack: number;
   frame: number;
-}> = ({ pid, flip, shoulder, elbow, mode, star, attack, frame }) => {
+  held: "star" | "candle" | "blood" | "guard";
+}> = ({ pid, flip, shoulder, elbow, mode, star, attack, frame, held }) => {
   const s = flip ? -1 : 1;
   const clawX = [-16, -6, 4, 14];
   const claws = flip ? [-14, -4, 6, 16] : clawX;
+
+  // Sangre goteante (garra izquierda superior) — ciclo determinista.
+  const bloodDrops = [0, 1, 2].map((i) => {
+    const cycle = 44 + i * 14;
+    const p = (frame * 1.5 + i * 17) % cycle;
+    const y = 34 + p * 1.9;
+    const op = Math.max(0, 1 - p / cycle);
+    return { x: -8 + i * 8, y, r: 2.4 + (i % 2), op };
+  });
 
   return (
     <g transform={`rotate(${shoulder})`}>
@@ -378,18 +434,90 @@ const ZalgoArm: React.FC<{
               fill="#060409"
             />
           ))}
-          {/* Objeto sostenido en espacio abierto */}
-          {mode === "cosmic" ? (
-            <g transform={`translate(${flip ? -6 : 6}, -8) scale(${s}, 1)`}>
-              {flip ? (
-                <DeadStar power={star} pid={pid} frame={frame} />
-              ) : (
-                <BlackCandle power={star} pid={pid} frame={frame} />
-              )}
+
+          {/* Objeto sostenido en espacio abierto, SIN tapar la cabeza */}
+          {held === "star" ? (
+            <g transform="translate(0, 52)" opacity={star}>
+              <DeadStar power={star} pid={pid} frame={frame} />
             </g>
           ) : null}
-          {/* Zarcillos carmesí de corrupción (modo battle, brazo derecho) */}
-          {mode === "battle" && flip ? (
+          {held === "candle" ? (
+            <g transform="translate(0, 46)" opacity={star}>
+              <BlackCandle power={star} pid={pid} frame={frame} />
+            </g>
+          ) : null}
+
+          {/* Garra izquierda superior: mancha de sangre + goteo + sombras */}
+          {held === "blood" ? (
+            <g>
+              {/* Mancha carmesí sobre la garra */}
+              <path
+                d="M -20 4 C -12 12, 2 16, 14 10 C 18 18, 12 24, 2 27 C -8 28, -18 22, -20 4 Z"
+                fill="#DC2626"
+                opacity="0.72"
+              />
+              {/* Gotas cayendo */}
+              {bloodDrops.map((d, i) => (
+                <g key={`drop-${i}`} opacity={d.op}>
+                  <ellipse cx={d.x} cy={d.y} rx={d.r * 0.7} ry={d.r} fill="#DC2626" />
+                  <ellipse
+                    cx={d.x + d.r * 0.3}
+                    cy={d.y - d.r * 0.4}
+                    rx={d.r * 0.3}
+                    ry={d.r * 0.4}
+                    fill="#F43F5E"
+                  />
+                </g>
+              ))}
+              {/* Zarcillos de sombra alzándose desde la garra */}
+              <g fill="none" strokeLinecap="round" opacity={0.55 + attack * 0.45}>
+                <path
+                  d="M -4 22 C -22 6, -36 -16, -44 -44"
+                  stroke="#0B0A0E"
+                  strokeWidth="5"
+                />
+                <path
+                  d="M 8 24 C -4 8, -14 -12, -18 -38"
+                  stroke="#7F1D1D"
+                  strokeWidth="3"
+                />
+                <path
+                  d="M -4 22 C -22 6, -36 -16, -44 -44"
+                  stroke="#DC2626"
+                  strokeWidth="1.4"
+                />
+              </g>
+            </g>
+          ) : null}
+
+          {/* Garra izquierda inferior: mano manchada de carmesí, en guardia baja */}
+          {held === "guard" ? (
+            <g>
+              <path
+                d="M -22 0 C -26 11, -24 22, -16 30 L 26 30 C 20 22, 20 11, 17 0 Z"
+                fill="#1A0508"
+                opacity="0.5"
+              />
+              <path
+                d="M -18 8 C -8 16, 4 18, 16 12 C 12 22, 2 26, -10 24 C -16 22, -20 16, -18 8 Z"
+                fill="#DC2626"
+                opacity="0.6"
+              />
+              {/* Zarcillo carmesí de corrupción (modo battle) */}
+              {mode === "battle" ? (
+                <g opacity={0.4 + attack * 0.6} fill="none" strokeLinecap="round">
+                  <path
+                    d="M 2 22 C -10 4, -20 -18, -26 -46"
+                    stroke="#DC2626"
+                    strokeWidth="3"
+                  />
+                </g>
+              ) : null}
+            </g>
+          ) : null}
+
+          {/* Zarcillos carmesí de corrupción (modo battle, brazo derecho superior) */}
+          {mode === "battle" && held === "star" ? (
             <g opacity={0.5 + attack * 0.5}>
               {[0, 1, 2].map((i) => {
                 const a = (-20 + i * 40) * (Math.PI / 180);
@@ -424,6 +552,7 @@ export const ZalgoEntity: React.FC<{
   mode?: "cosmic" | "battle" | "finale";
   mouthsOpen?: number;
   starPower?: number;
+  seventhMouthSing?: number;
   attackIntensity?: number;
   localFrame?: number;
   idPrefix?: string;
@@ -431,6 +560,7 @@ export const ZalgoEntity: React.FC<{
   mode = "cosmic",
   mouthsOpen = 0,
   starPower = 0.5,
+  seventhMouthSing = 0,
   attackIntensity = 0,
   localFrame,
   idPrefix = "zalgo",
@@ -440,6 +570,7 @@ export const ZalgoEntity: React.FC<{
 
   const m = clamp01(mouthsOpen);
   const star = clamp01(starPower);
+  const sing = clamp01(seventhMouthSing);
   const attack = clamp01(attackIntensity);
   const pid = idPrefix;
   const gid = (n: string) => `${pid}-${n}`;
@@ -448,43 +579,61 @@ export const ZalgoEntity: React.FC<{
   const levitate = Math.sin(frame * 0.04) * 8;
   const expand = 1 + Math.sin(frame * 0.05) * 0.03;
 
-  // Pose de brazos por modo (pivotes en hombros EXTERNOS, brazos a los lados).
-  let lShoulder: number;
-  let lElbow: number;
-  let rShoulder: number;
-  let rElbow: number;
+  // Pose de los 4 brazos por modo (pivotes en hombros EXTERNOS).
+  let uLShoulder: number;
+  let uLElbow: number;
+  let uRShoulder: number;
+  let uRElbow: number;
+  let lLShoulder: number;
+  let lLElbow: number;
+  let lRShoulder: number;
+  let lRElbow: number;
   let torsoTilt = 0;
 
   if (mode === "cosmic") {
-    // Brazos extendidos hacia afuera y arriba en "V" alzada.
-    lShoulder = 140;
-    lElbow = 40;
-    rShoulder = -140;
-    rElbow = -40;
+    // Brazos superiores en "V" alzada; inferiores extendidos a los lados.
+    uLShoulder = 128;
+    uLElbow = 36;
+    uRShoulder = -128;
+    uRElbow = -36;
+    lLShoulder = 66;
+    lLElbow = 24;
+    lRShoulder = -66;
+    lRElbow = -24;
   } else if (mode === "battle") {
-    // Izquierdo en guardia, derecho agresivo hacia el enemigo (derecha).
-    lShoulder = 110;
-    lElbow = 35;
-    rShoulder = -110 - attack * 12;
-    rElbow = -35 - attack * 10;
+    // Izquierdos en guardia, derechos agresivos hacia el enemigo (derecha).
+    uLShoulder = 108;
+    uLElbow = 32;
+    uRShoulder = -118 - attack * 12;
+    uRElbow = -38 - attack * 10;
+    lLShoulder = 58;
+    lLElbow = 22;
+    lRShoulder = -58;
+    lRElbow = -22;
     torsoTilt = 5 + attack * 7;
   } else {
     // finale: postura imponente, brazos abiertos / en guardia alzados.
-    lShoulder = 125;
-    lElbow = 30;
-    rShoulder = -125;
-    rElbow = -30;
+    uLShoulder = 122;
+    uLElbow = 30;
+    uRShoulder = -122;
+    uRElbow = -30;
+    lLShoulder = 62;
+    lLElbow = 22;
+    lRShoulder = -62;
+    lRElbow = -22;
   }
 
   // Apertura escalonada de las 7 bocas
   const mouthOpenAt = (i: number) => clamp01(m * 1.15 - i * 0.04);
+  // La séptima boca central se abre más y brilla al cantar.
+  const centralOpen = clamp01(mouthOpenAt(0) + sing * 0.22);
 
   // Tentáculos traseros (absolutos) y frontales (locales al torso): humo abisal
   // descendente que fluye desde la cintura hasta la base del viewBox.
   const backTendrils = [0, 1, 2, 3].map((i) =>
     makeTendril(
-      410 + (i - 1.5) * 72,
-      620,
+      480 + (i - 1.5) * 78,
+      660,
       Math.PI / 2 + (i - 1.5) * 0.3,
       300 + i * 55,
       0.32 + 0.06 * i,
@@ -494,7 +643,7 @@ export const ZalgoEntity: React.FC<{
   );
   const frontTendrils = [0, 1, 2, 3].map((i) =>
     makeTendril(
-      (i - 1.5) * 52,
+      (i - 1.5) * 56,
       20,
       Math.PI / 2 + (i - 1.5) * 0.38,
       230 + i * 48,
@@ -504,14 +653,18 @@ export const ZalgoEntity: React.FC<{
     )
   );
 
+  // Chisporroteo de la corona (flicker determinista).
+  const sparkFlicker = (i: number) =>
+    0.3 + 0.7 * Math.abs(Math.sin(frame * 0.22 + CROWN_SPARKS[i].phase));
+
   return (
     <svg
-      viewBox="0 0 820 960"
+      viewBox="0 0 960 980"
       width="100%"
       height="100%"
       style={{ display: "block", overflow: "visible" }}
       role="img"
-      aria-label="Zalgo, coloso cósmico de siete bocas"
+      aria-label="Zalgo, coloso cósmico sin ojos de siete bocas y cuatro brazos"
     >
       <defs>
         <linearGradient id={gid("abyss")} x1="0" y1="0" x2="0.6" y2="1">
@@ -546,7 +699,7 @@ export const ZalgoEntity: React.FC<{
       </defs>
 
       {/* Aura cósmica tenue */}
-      <ellipse cx="410" cy="430" rx="300" ry="360" fill="#7F1D1D" opacity="0.12" filter={`url(#${gid("glow")})`} />
+      <ellipse cx="480" cy="470" rx="360" ry="400" fill="#7F1D1D" opacity="0.12" filter={`url(#${gid("glow")})`} />
 
       {/* Tentáculos traseros (manto posterior) */}
       <g fill={`url(#${gid("tendril")})`}>
@@ -556,7 +709,7 @@ export const ZalgoEntity: React.FC<{
       </g>
 
       {/* ===== torsoGroup: levitación + expansión (pivote en la cintura) ===== */}
-      <g transform={`translate(410, ${760 + levitate}) rotate(${torsoTilt}) scale(${expand}, ${expand})`}>
+      <g transform={`translate(480, ${820 + levitate}) rotate(${torsoTilt}) scale(${expand}, ${expand})`}>
         {/* --- Manto de sombras rasgadas (silueta monumental hasta la base) --- */}
         <path
           d="M -235 -430 C -262 -350, -276 -230, -268 -90 C -262 30, -286 120, -268 190 L -196 158 L -176 208 L -96 158 L -40 210 L 40 210 L 96 158 L 176 208 L 196 158 L 268 190 C 286 120, 262 30, 268 -90 C 276 -230, 262 -350, 235 -430 C 150 -456, -150 -456, -235 -430 Z"
@@ -598,49 +751,69 @@ export const ZalgoEntity: React.FC<{
           <path d="M -20 0 C -20 -16, -18 -30, -15 -46 L 15 -46 C 18 -30, 20 -16, 20 0 Z" fill="#0A070C" />
 
           <g transform="translate(0, -44)">
-            {/* Corona de rayos / cuernos oscuros detrás del cráneo */}
+            {/* Corona de relámpagos negros detrás del cráneo */}
             <g>
-              {Array.from({ length: 13 }, (_, i) => {
-                const glow = mode === "finale" ? 0.8 : 0.3;
-                return (
-                  <g key={`ray-${i}`} transform={`rotate(${-140 + (i * 280) / 12})`}>
-                    <path
-                      d="M -7 -96 L 7 -96 L 3 -196 L 0 -236 L -3 -196 Z"
-                      fill={i % 2 === 0 ? "#0A070C" : "#060409"}
-                    />
-                    <path
-                      d="M -3 -196 L 0 -236 L 3 -196"
-                      stroke="#DC2626"
-                      strokeWidth="1.5"
-                      fill="none"
-                      opacity={glow}
-                    />
-                  </g>
-                );
-              })}
+              {CROWN.map((bolt, i) => (
+                <g key={`bolt-${i}`} transform={`rotate(${bolt.angle})`}>
+                  <path
+                    d={bolt.d}
+                    stroke="#050308"
+                    strokeWidth="6"
+                    fill="none"
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d={bolt.d}
+                    stroke="#0D0609"
+                    strokeWidth="2.6"
+                    fill="none"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d={bolt.d}
+                    stroke="#DC2626"
+                    strokeWidth="1.5"
+                    fill="none"
+                    strokeLinejoin="round"
+                    opacity={mode === "finale" ? 0.85 : 0.55}
+                  />
+                  {/* Punta luminosa del relámpago */}
+                  <circle
+                    cy={-bolt.len}
+                    r={3}
+                    fill="#DC2626"
+                    opacity={0.4 + sparkFlicker(i) * 0.5}
+                    filter={`url(#${gid("blur")})`}
+                  />
+                </g>
+              ))}
+              {/* Chispas carmesí chisporroteando */}
+              {CROWN_SPARKS.map((sp, i) => (
+                <circle
+                  key={`spark-${i}`}
+                  cx={sp.x}
+                  cy={sp.y}
+                  r={sp.r}
+                  fill="#DC2626"
+                  opacity={sparkFlicker(i)}
+                />
+              ))}
             </g>
 
-            {/* Cabeza eldritch */}
+            {/* Cabeza eldritch SIN OJOS */}
             <g transform="translate(0, -40)">
-              {/* Cráneo (anguloso, alargado) */}
+              {/* Cráneo (anguloso, alargado, liso y oscuro) */}
               <path
                 d="M 0 -116 C 52 -116, 96 -92, 102 -50 C 108 -14, 102 14, 88 40 C 72 70, 46 92, 22 102 C 6 108, -6 108, -22 102 C -46 92, -72 70, -88 40 C -102 14, -108 -14, -102 -50 C -96 -92, -52 -116, 0 -116 Z"
                 fill={`url(#${gid("abyss")})`}
               />
+              {/* Rostro liso oscuro: sin cuencas, solo sombra de pómulos */}
+              <path d="M -58 -34 C -40 -52, -20 -56, 0 -56 C 20 -56, 40 -52, 58 -34 C 38 -40, 18 -42, 0 -42 C -18 -42, -38 -40, -58 -34 Z" fill="#0D0609" opacity="0.55" />
               {/* Rim light carmesí del cráneo */}
               <path d="M -88 40 C -102 14, -108 -14, -102 -50 C -96 -92, -52 -116, 0 -116" stroke="#DC2626" strokeWidth="2.5" fill="none" opacity="0.55" />
-              {/* Cuencas oculares negras llorando luz carmesí */}
-              <path d="M -58 -34 C -40 -46, -22 -46, -12 -30 C -24 -16, -42 -16, -58 -34 Z" fill="#020304" />
-              <path d="M 58 -34 C 40 -46, 22 -46, 12 -30 C 24 -16, 42 -16, 58 -34 Z" fill="#020304" />
-              <path d="M -36 -28 L -32 -8" stroke="#DC2626" strokeWidth="3" strokeLinecap="round" opacity="0.9" />
-              <path d="M -26 -28 L -22 -4" stroke="#F43F5E" strokeWidth="2" strokeLinecap="round" opacity="0.7" />
-              <path d="M 36 -28 L 32 -8" stroke="#DC2626" strokeWidth="3" strokeLinecap="round" opacity="0.9" />
-              <path d="M 26 -28 L 22 -4" stroke="#F43F5E" strokeWidth="2" strokeLinecap="round" opacity="0.7" />
 
-              {/* Bocas del rostro: mandíbula principal (1), frente (2), mejillas (3 y 4) */}
-              <g transform="translate(0, 44)">
-                <ZalgoMouth hw={54} open={mouthOpenAt(0)} pid={pid} seed={0} />
-              </g>
+              {/* Bocas del rostro: frente (1), mejillas (2 y 3), mandíbula central (0) */}
               <g transform="translate(0, -70)">
                 <ZalgoMouth hw={30} open={mouthOpenAt(1)} pid={pid} seed={1} />
               </g>
@@ -651,43 +824,91 @@ export const ZalgoEntity: React.FC<{
                 <ZalgoMouth hw={26} open={mouthOpenAt(3)} pid={pid} seed={3} />
               </g>
 
+              {/* Séptima boca central: brilla intensamente al cantar la melodía */}
+              {sing > 0.01 ? (
+                <ellipse
+                  cx="0"
+                  cy="46"
+                  rx="76"
+                  ry="44"
+                  fill="#DC2626"
+                  opacity={0.3 * sing}
+                  filter={`url(#${gid("glow")})`}
+                />
+              ) : null}
+              <g transform="translate(0, 44)">
+                <ZalgoMouth hw={54} open={centralOpen} pid={pid} seed={0} />
+              </g>
+
               {/* Grietas carmesí en el cráneo */}
               <path d="M -20 -110 C -16 -80, -20 -50, -12 -20" stroke="#7F1D1D" strokeWidth="2.5" fill="none" opacity="0.7" />
               <path d="M 20 -110 C 16 -80, 20 -50, 12 -20" stroke="#7F1D1D" strokeWidth="2.5" fill="none" opacity="0.7" />
             </g>
           </g>
 
-          {/* Boca del cuello (5) */}
+          {/* Boca de la garganta (5) */}
           <g transform="translate(0, 20)">
             <ZalgoMouth hw={30} open={mouthOpenAt(4)} pid={pid} seed={4} />
           </g>
         </g>
 
-        {/* ===== Brazo izquierdo (pivote en el hombro EXTERNO izquierdo) ===== */}
-        <g transform={`translate(-205, -408)`}>
+        {/* ===== Brazo Izquierdo Superior (garra de sangre) ===== */}
+        <g transform="translate(-215, -400)">
           <ZalgoArm
             pid={pid}
             flip={false}
-            shoulder={lShoulder}
-            elbow={lElbow}
+            shoulder={uLShoulder}
+            elbow={uLElbow}
             mode={mode}
             star={star}
             attack={attack}
             frame={frame}
+            held="blood"
           />
         </g>
 
-        {/* ===== Brazo derecho (pivote en el hombro EXTERNO derecho) ===== */}
-        <g transform={`translate(205, -408)`}>
+        {/* ===== Brazo Derecho Superior (estrella muerta) ===== */}
+        <g transform="translate(215, -400)">
           <ZalgoArm
             pid={pid}
             flip
-            shoulder={rShoulder}
-            elbow={rElbow}
+            shoulder={uRShoulder}
+            elbow={uRElbow}
             mode={mode}
             star={star}
             attack={attack}
             frame={frame}
+            held="star"
+          />
+        </g>
+
+        {/* ===== Brazo Izquierdo Inferior (guardia baja carmesí) ===== */}
+        <g transform="translate(-145, -252)">
+          <ZalgoArm
+            pid={pid}
+            flip={false}
+            shoulder={lLShoulder}
+            elbow={lLElbow}
+            mode={mode}
+            star={star}
+            attack={attack}
+            frame={frame}
+            held="guard"
+          />
+        </g>
+
+        {/* ===== Brazo Derecho Inferior (vela negra) ===== */}
+        <g transform="translate(145, -252)">
+          <ZalgoArm
+            pid={pid}
+            flip
+            shoulder={lRShoulder}
+            elbow={lRElbow}
+            mode={mode}
+            star={star}
+            attack={attack}
+            frame={frame}
+            held="candle"
           />
         </g>
 

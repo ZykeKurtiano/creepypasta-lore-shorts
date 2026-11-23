@@ -44,13 +44,15 @@ const GrainLayer: React.FC = () => {
   );
 };
 
-/** Eventos que disparan picos de aberración cromática (momentos clave de Zalgo). */
+/** Eventos que disparan picos de aberración cromática (momentos clave de las 6 escenas). */
 const CHROMA_EVENTS: Array<{ at: number; strength: number }> = [
-  { at: 430, strength: 1 },
+  { at: 350, strength: 1 },
   { at: SCENES.scene2.start, strength: 0.85 },
-  { at: 720, strength: 0.9 },
   { at: SCENES.scene3.start, strength: 0.85 },
+  { at: SCENES.scene3.start + 90, strength: 0.9 },
   { at: SCENES.scene4.start, strength: 1 },
+  { at: SCENES.scene5.start, strength: 0.85 },
+  { at: SCENES.scene6.start, strength: 1 },
 ];
 
 const pad = (n: number): string => String(n).padStart(2, "0");
