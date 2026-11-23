@@ -1,317 +1,283 @@
-import React, { useEffect, useRef } from "react";
-import {
-  AbsoluteFill,
-  interpolate,
-  random,
-  useCurrentFrame,
-} from "remotion";
+import React from "react";
+import { AbsoluteFill, interpolate, useCurrentFrame } from "remotion";
+import { SCENES, SFX_CUES } from "../data/episodeConfig";
 import { flashEnvelope } from "./Camera25D";
 
 /**
- * SceneTransitions — Transiciones dinámicas entre escenas (frames globales):
- *  - frame 138 y 260: estallido de flash de cámara vintage + postimagen fría
- *    con división cromática.
- *  - frame 489: desgarro de tracking VHS + ráfaga de estática (12 frames).
- *  - frame 846: barrido horizontal whip-pan (streak de motion blur, 10 frames;
- *    el deslizamiento translateX real lo aplica MainComposition).
- *  - frame 1113: whip-pan + interferencia VHS (12 frames).
- *  - frame 1347: apagón duro / destello carmesí hacia el close-up final.
+ * SceneTransitions — Transiciones cinematográficas continuas estilo
+ * Kurzgesagt oscuro (CERO cortes secos) sobre las fronteras exactas de las 6
+ * escenas. Cada ventana dura ~22–28 frames centrada en el límite de escena
+ * para ocultar cualquier corte seco.
+ *
+ *  1. Flash de cámara dentro de Escena 1 (SFX_CUES.cameraShutterFrame).
+ *  2. 1→2 (SCENES.scene2.start): zoom-through por lente/visor de cámara.
+ *  3. 2→3 (SCENES.scene3.start): losa monolítica de basalto deslizante.
+ *  4. 3→4 (SCENES.scene4.start): aislamiento por cono de luz (spotlight).
+ *  5. 4→5 (SCENES.scene5.start): zoom-through por cristal de ventana.
+ *  6. 5→6 (SCENES.scene6.start): divisor diagonal luminoso cobalto/abisal.
  */
 
-const TearStatic: React.FC<{ opacity: number }> = ({ opacity }) => {
-  const frame = useCurrentFrame();
-  const ref = useRef<HTMLCanvasElement | null>(null);
+/** Progreso 0→1 de una ventana centrada en `center` con semi-ancho `half`. */
+const winProg = (frame: number, center: number, half: number): number =>
+  interpolate(frame, [center - half, center + half], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
 
-  useEffect(() => {
-    const canvas = ref.current;
-    if (!canvas) {
-      return;
-    }
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      return;
-    }
-    const w = 96;
-    const h = 160;
-    const img = ctx.createImageData(w, h);
-    const tearY = 50 + Math.round((frame * 13) % 90);
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const g = random(frame * 77 + y * w + x);
-        const v = g > 0.5 ? 235 : 18;
-        const shift =
-          y > tearY ? Math.round((random(frame * 3 + y * 5) - 0.5) * 16) : 0;
-        const sx = (x + shift + w) % w;
-        const idx = (y * w + sx) * 4;
-        img.data[idx] = v;
-        img.data[idx + 1] = v;
-        img.data[idx + 2] = v;
-        img.data[idx + 3] = g > 0.5 ? 210 : 95;
-      }
-    }
-    ctx.putImageData(img, 0, 0);
-  }, [frame]);
+/** Retícula fugaz de visor digital (postimagen del flash). */
+const Reticle: React.FC<{ opacity: number }> = ({ opacity }) => (
+  <svg
+    width="1080"
+    height="1920"
+    viewBox="0 0 1080 1920"
+    style={{ position: "absolute", inset: 0, opacity }}
+  >
+    <g stroke="rgba(34,211,238,0.85)" strokeWidth={2} fill="none">
+      <line x1={540} y1={840} x2={540} y2={1080} />
+      <line x1={420} y1={960} x2={660} y2={960} />
+    </g>
+    <circle cx={540} cy={960} r={210} fill="none" stroke="rgba(34,211,238,0.5)" strokeWidth={1.5} />
+    <g stroke="rgba(242,239,233,0.7)" strokeWidth={3} fill="none">
+      <path d="M 300 760 L 340 760 L 340 800" />
+      <path d="M 780 760 L 740 760 L 740 800" />
+      <path d="M 300 1160 L 340 1160 L 340 1120" />
+      <path d="M 780 1160 L 740 1160 L 740 1120" />
+    </g>
+    <circle cx={540} cy={960} r={5} fill="#22D3EE" />
+  </svg>
+);
 
-  return (
-    <canvas
-      ref={ref}
-      width={96}
-      height={160}
+/** Losa monolítica de basalto con arista cincelada y luz de borde azul fría. */
+const BasaltSlab: React.FC<{ x: number }> = ({ x }) => (
+  <div style={{ position: "absolute", top: 0, bottom: 0, left: x, width: 1120 }}>
+    <svg width="1120" height="1920" viewBox="0 0 1120 1920" style={{ display: "block" }}>
+      <defs>
+        <linearGradient id="st-basalt" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#06080C" />
+          <stop offset="55%" stopColor="#0B0F16" />
+          <stop offset="100%" stopColor="#040507" />
+        </linearGradient>
+      </defs>
+      <rect x="0" y="0" width="1120" height="1920" fill="url(#st-basalt)" />
+      <g stroke="#131A24" strokeWidth={1.5} fill="none" opacity={0.5}>
+        <path d="M 60 0 C 90 400, 70 900, 110 1920" />
+        <path d="M 300 0 C 280 500, 320 1100, 290 1920" />
+        <path d="M 600 0 C 620 450, 590 1000, 630 1920" />
+        <path d="M 900 0 C 880 600, 920 1200, 890 1920" />
+      </g>
+      <rect x="0" y="0" width="46" height="1920" fill="#151D28" />
+      <path d="M 46 0 L 78 0 L 60 1920 L 30 1920 Z" fill="#0A0E15" />
+      <rect x="0" y="0" width="6" height="1920" fill="#2B4A8C" opacity={0.85} />
+      <rect x="0" y="0" width="2" height="1920" fill="#60A5FA" opacity={0.6} />
+    </svg>
+  </div>
+);
+
+/** Aislamiento por cono de luz: velo de siluetas + haz volumétrico cónico. */
+const SpotlightIsolation: React.FC<{ veil: number; coneW: number }> = ({ veil, coneW }) => (
+  <AbsoluteFill>
+    <AbsoluteFill
       style={{
-        position: "absolute",
-        inset: 0,
-        width: "100%",
-        height: "100%",
-        imageRendering: "pixelated",
-        opacity,
-        mixBlendMode: "screen",
+        background:
+          "radial-gradient(ellipse at 50% 42%, transparent 30%, rgba(2,3,5,0.9) 75%, #020306 100%)",
+        opacity: veil,
       }}
     />
-  );
-};
+    <svg width="1080" height="1920" viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+      <defs>
+        <linearGradient id="st-cone" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#9FC6E8" stopOpacity="0.55" />
+          <stop offset="100%" stopColor="#9FC6E8" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <polygon
+        points={`${540 - coneW / 2},420 ${540 + coneW / 2},420 680,1580 400,1580`}
+        fill="url(#st-cone)"
+        opacity={1 - veil * 0.4}
+      />
+    </svg>
+    <div
+      style={{
+        position: "absolute",
+        top: 400,
+        left: 540 - 14,
+        width: 28,
+        height: 40,
+        background: "#BFD7EC",
+        borderRadius: "0 0 8px 8px",
+        boxShadow: "0 0 40px rgba(159,198,232,0.9)",
+      }}
+    />
+  </AbsoluteFill>
+);
 
-const WhipStreak: React.FC<{ from: number; len: number; opacity: number }> = ({
-  from,
-  len,
-  opacity,
-}) => {
-  const frame = useCurrentFrame();
-  const bars = [0, 1, 2, 3, 4, 5, 6];
-  return (
-    <AbsoluteFill style={{ overflow: "hidden" }}>
-      {bars.map((k) => {
-        const x = interpolate(
-          frame,
-          [from, from + len],
-          [-240 + k * 96, 1080 + k * 46],
-          { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-        );
-        return (
-          <div
-            key={k}
-            style={{
-              position: "absolute",
-              top: -60,
-              left: x,
-              width: 66 + k * 26,
-              height: 2040,
-              background:
-                "linear-gradient(90deg, transparent, rgba(214,238,255,0.16), transparent)",
-              filter: "blur(6px)",
-              opacity,
-            }}
-          />
-        );
-      })}
-      {/* Borde luminoso del barrido */}
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          left: interpolate(frame, [from, from + len], [-60, 1120], {
-            extrapolateLeft: "clamp",
-            extrapolateRight: "clamp",
-          }),
-          width: 5,
-          height: 1920,
-          background:
-            "linear-gradient(180deg, transparent, rgba(240,248,255,0.9), transparent)",
-          filter: "blur(1px)",
-          opacity: opacity * 0.9,
-        }}
+/** Marcos de madera y reflejos diagonales de vidrio que escalan rápido. */
+const WindowGlass: React.FC<{ scale: number }> = ({ scale }) => (
+  <div
+    style={{
+      position: "absolute",
+      left: "50%",
+      top: "50%",
+      width: 900,
+      height: 1400,
+      transform: `translate(-50%, -50%) scale(${scale})`,
+    }}
+  >
+    <svg width="900" height="1400" viewBox="0 0 900 1400" style={{ display: "block" }}>
+      <defs>
+        <linearGradient id="st-glass" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#162129" stopOpacity="0.85" />
+          <stop offset="100%" stopColor="#04070C" stopOpacity="0.95" />
+        </linearGradient>
+      </defs>
+      <rect x="0" y="0" width="900" height="1400" rx="14" fill="#1A150E" />
+      <rect x="26" y="26" width="848" height="1348" fill="url(#st-glass)" />
+      <rect x="26" y="440" width="848" height="40" fill="#241C10" />
+      <rect x="26" y="920" width="848" height="40" fill="#241C10" />
+      <rect x="430" y="26" width="40" height="1348" fill="#241C10" />
+      <g stroke="rgba(34,211,238,0.25)" strokeWidth={14} fill="none">
+        <path d="M 40 60 L 430 460" />
+        <path d="M 60 240 L 560 760" />
+        <path d="M 60 900 L 300 1200" />
+        <path d="M 470 60 L 860 460" />
+      </g>
+      <g stroke="rgba(220,240,255,0.12)" strokeWidth={6} fill="none">
+        <path d="M 40 160 L 560 720" />
+        <path d="M 500 100 L 860 500" />
+      </g>
+    </svg>
+  </div>
+);
+
+/** Divisor diagonal luminoso cobalto/abisal que barre y se fija en el centro. */
+const DiagonalDivider: React.FC<{ x: number }> = ({ x }) => (
+  <AbsoluteFill>
+    <svg width="1080" height="1920" viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+      <line x1={x - 900} y1="0" x2={x + 900} y2="1920" stroke="#1D4ED8" strokeWidth={7} />
+      <line x1={x - 900} y1="0" x2={x + 900} y2="1920" stroke="#60A5FA" strokeWidth={2} />
+      <line
+        x1={x - 900}
+        y1="0"
+        x2={x + 900}
+        y2="1920"
+        stroke="rgba(29,78,216,0.5)"
+        strokeWidth={26}
+        opacity={0.4}
       />
-      {/* Oscurecimiento direccional */}
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          background:
-            "linear-gradient(90deg, rgba(2,3,5,0.5), transparent 35%, transparent 65%, rgba(2,3,5,0.5))",
-          opacity,
-        }}
-      />
-    </AbsoluteFill>
-  );
-};
+    </svg>
+    <div
+      style={{
+        position: "absolute",
+        top: 0,
+        bottom: 0,
+        left: x,
+        right: 0,
+        background: "#040507",
+        opacity: 0.75,
+      }}
+    />
+  </AbsoluteFill>
+);
 
 export const SceneTransitions: React.FC = () => {
   const frame = useCurrentFrame();
 
-  // --- Destellos de cámara dentro de la escena 1 ---
-  const flash1 = flashEnvelope(frame, 138, 24, 1);
-  const flash1After =
-    frame >= 144 && frame <= 185
-      ? interpolate(frame, [144, 185], [0.26, 0])
+  // ---- 1. Flash de cámara dentro de Escena 1 ----
+  const flash = flashEnvelope(frame, SFX_CUES.cameraShutterFrame, 16, 1);
+  const flashAfter =
+    frame >= SFX_CUES.cameraShutterFrame + 2 &&
+    frame <= SFX_CUES.cameraShutterFrame + 24
+      ? interpolate(
+          frame,
+          [SFX_CUES.cameraShutterFrame + 2, SFX_CUES.cameraShutterFrame + 24],
+          [0.22, 0]
+        )
       : 0;
-  const flash2 = flashEnvelope(frame, 260, 17, 0.6);
-  const flash2After =
-    frame >= 266 && frame <= 296
-      ? interpolate(frame, [266, 296], [0.16, 0])
+  const reticle =
+    frame >= SFX_CUES.cameraShutterFrame &&
+    frame <= SFX_CUES.cameraShutterFrame + 18
+      ? interpolate(
+          frame,
+          [SFX_CUES.cameraShutterFrame, SFX_CUES.cameraShutterFrame + 5, SFX_CUES.cameraShutterFrame + 18],
+          [0, 0.85, 0]
+        )
       : 0;
-  const coldAfter = Math.max(flash1After, flash2After);
 
-  // --- Desgarro VHS (Scene 1 → 2) ---
-  const tear489 = interpolate(frame, [487, 489, 495, 497], [0, 1, 1, 0], {
+  // ---- 2. Zoom-through por lente/visor (1→2) ----
+  const t1 = winProg(frame, SCENES.scene2.start, 14);
+  const holeR = interpolate(t1, [0, 1], [36, 1560]);
+  const ringW = interpolate(t1, [0, 1], [140, 18]);
+  const ringAlpha = interpolate(t1, [0, 0.1, 0.9, 1], [0, 1, 1, 0]);
+
+  // ---- 3. Losa de piedra negra (2→3) ----
+  const t2 = winProg(frame, SCENES.scene3.start, 13);
+  const slabX = interpolate(t2, [0, 1], [1120, -1120]);
+
+  // ---- 4. Aislamiento por cono de luz (3→4) ----
+  const t3 = winProg(frame, SCENES.scene4.start, 14);
+  const veil = interpolate(t3, [0, 0.5, 1], [0, 0.86, 0]);
+  const coneW = interpolate(t3, [0, 0.5, 1], [540, 120, 540]);
+
+  // ---- 5. Zoom-through por cristal de ventana (4→5) ----
+  const t4 = winProg(frame, SCENES.scene5.start, 13);
+  const glassScale = interpolate(t4, [0, 1], [0.6, 3.4]);
+
+  // ---- 6. Divisor diagonal luminoso (5→6) ----
+  const t5 = winProg(frame, SCENES.scene6.start, 13);
+  const diagX = interpolate(t5, [0, 0.5, 1], [1180, 540, 540]);
+
+  // Envolventes de opacidad para que los overlays entren y desaparezcan a 0%
+  // sin dejar artefactos fuera de su ventana (~26-28 frames).
+  const fade3 = interpolate(t3, [0, 0.16, 0.84, 1], [0, 1, 1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-
-  // --- Whip-pan (Scene 2 → 3) ---
-  const whip846 = interpolate(frame, [846, 850, 854, 856], [0, 0.95, 0.5, 0], {
+  const fade5 = interpolate(t5, [0, 0.16, 0.84, 1], [0, 1, 1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-
-  // --- Whip-pan + glitch (Scene 3 → 4) ---
-  const whip1113 = interpolate(
-    frame,
-    [1113, 1117, 1121, 1125],
-    [0, 0.9, 0.55, 0],
-    {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-    }
-  );
-  const tear1113 = interpolate(frame, [1111, 1113, 1119, 1121], [0, 1, 1, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-
-  // --- Apagón duro / destello carmesí (Scene 4 → 5) ---
-  // (Guardas de rango explícitas: extrapolateLeft clamp filtraría estos
-  // valores sobre TODOS los frames anteriores.)
-  const black =
-    frame >= 1346 && frame <= 1352
-      ? interpolate(frame, [1346, 1348, 1352], [1, 0.7, 0])
-      : 0;
-  const whiteSnap =
-    frame >= 1347 && frame <= 1349
-      ? interpolate(frame, [1347, 1348, 1349], [0.75, 1, 0])
-      : 0;
-  const crimson =
-    frame >= 1348 && frame <= 1355
-      ? interpolate(frame, [1348, 1351, 1355], [0.85, 0.4, 0])
-      : 0;
-
-  const flashTotal = Math.max(flash1, flash2) + flash1After * 0.5;
 
   return (
     <AbsoluteFill style={{ zIndex: 20, pointerEvents: "none" }}>
-      {/* Flash cámara 1 (smile.jpg) */}
-      {flash1 > 0.004 ? (
-        <AbsoluteFill style={{ background: "#F7FAFD", opacity: flash1 }} />
-      ) : null}
-      {/* Flash cámara 2 (flash) */}
-      {flash2 > 0.004 ? (
-        <AbsoluteFill style={{ background: "#EDF2F8", opacity: flash2 }} />
-      ) : null}
-      {/* Postimagen fría + división cromática */}
-      {coldAfter > 0.004 ? (
-        <AbsoluteFill>
-          <AbsoluteFill
-            style={{ background: "#B9D4EC", opacity: coldAfter }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              top: 0,
-              bottom: 0,
-              left: 0,
-              width: 44,
-              background: "rgba(34,211,238,0.5)",
-              opacity: coldAfter,
-            }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              top: 0,
-              bottom: 0,
-              right: 0,
-              width: 44,
-              background: "rgba(244,63,94,0.5)",
-              opacity: coldAfter,
-            }}
-          />
-        </AbsoluteFill>
+      {/* 1. Flash de cámara */}
+      {flash > 0.004 ? <AbsoluteFill style={{ background: "#F7FAFD", opacity: flash }} /> : null}
+      {flashAfter > 0.004 ? <AbsoluteFill style={{ background: "#B9D4EC", opacity: flashAfter }} /> : null}
+      {reticle > 0.004 ? <Reticle opacity={reticle} /> : null}
+
+      {/* 2. Zoom-through por lente/visor */}
+      {t1 > 0.004 && t1 < 0.996 ? (
+        <svg width="1080" height="1920" viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+          <defs>
+            <mask id="st-lens-mask">
+              <rect width="1080" height="1920" fill="white" />
+              <circle cx="540" cy="960" r={holeR} fill="black" />
+            </mask>
+          </defs>
+          <rect width="1080" height="1920" fill="#040507" mask="url(#st-lens-mask)" />
+          <circle cx="540" cy="960" r={holeR} fill="none" stroke="#0B0F16" strokeWidth={ringW} opacity={ringAlpha} />
+          <circle cx="540" cy="960" r={holeR + ringW * 0.5} fill="none" stroke="#22D3EE" strokeWidth={2.5} opacity={ringAlpha * 0.7} />
+          <circle cx="540" cy="960" r={holeR} fill="none" stroke="#22D3EE" strokeWidth={1.5} opacity={ringAlpha * 0.5} />
+        </svg>
       ) : null}
 
-      {/* Desgarro VHS 489 */}
-      {tear489 > 0.004 ? <TearStatic opacity={tear489} /> : null}
-      {tear489 > 0.004 ? (
-        <div
-          style={{
-            position: "absolute",
-            left: 0,
-            right: 0,
-            top: interpolate(frame, [489, 501], [820, 700], {
-              extrapolateLeft: "clamp",
-              extrapolateRight: "clamp",
-            }),
-            height: 3,
-            background: "rgba(230,244,255,0.8)",
-            boxShadow: "0 0 18px rgba(34,211,238,0.8)",
-            opacity: tear489,
-          }}
-        />
+      {/* 3. Losa de piedra negra */}
+      {t2 > 0.004 && t2 < 0.996 ? <BasaltSlab x={slabX} /> : null}
+
+      {/* 4. Aislamiento por cono de luz */}
+      {t3 > 0.004 && t3 < 0.996 ? (
+        <div style={{ position: "absolute", inset: 0, opacity: fade3 }}>
+          <SpotlightIsolation veil={veil} coneW={coneW} />
+        </div>
       ) : null}
 
-      {/* Whip-pan 846 */}
-      {whip846 > 0.004 ? (
-        <WhipStreak from={846} len={10} opacity={whip846} />
-      ) : null}
+      {/* 5. Zoom-through por cristal de ventana */}
+      {t4 > 0.004 && t4 < 0.996 ? <WindowGlass scale={glassScale} /> : null}
 
-      {/* Whip-pan + glitch 1113 */}
-      {whip1113 > 0.004 ? (
-        <WhipStreak from={1113} len={12} opacity={whip1113} />
-      ) : null}
-      {tear1113 > 0.004 ? <TearStatic opacity={tear1113 * 0.9} /> : null}
-
-      {/* Apagón duro + destello carmesí 1347 */}
-      {black > 0.004 ? (
-        <AbsoluteFill style={{ background: "#000000", opacity: black }} />
-      ) : null}
-      {whiteSnap > 0.004 ? (
-        <AbsoluteFill
-          style={{ background: "#FFFFFF", opacity: whiteSnap }}
-        />
-      ) : null}
-      {crimson > 0.004 ? (
-        <AbsoluteFill style={{ background: "#7F1D1D", opacity: crimson }} />
-      ) : null}
-
-      {/* División cromática global en picos de tensión (flash 1) */}
-      {flashTotal > 0.02 ? (
-        <AbsoluteFill style={{ mixBlendMode: "screen" }}>
-          <div
-            style={{
-              position: "absolute",
-              top: 0,
-              bottom: 0,
-              left: 0,
-              width: interpolate(flashTotal, [0, 1], [0, 34], {
-                extrapolateLeft: "clamp",
-                extrapolateRight: "clamp",
-              }),
-              background: "rgba(34,211,238,0.35)",
-              opacity: Math.min(1, flashTotal),
-            }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              top: 0,
-              bottom: 0,
-              right: 0,
-              width: interpolate(flashTotal, [0, 1], [0, 34], {
-                extrapolateLeft: "clamp",
-                extrapolateRight: "clamp",
-              }),
-              background: "rgba(244,63,94,0.35)",
-              opacity: Math.min(1, flashTotal),
-            }}
-          />
-        </AbsoluteFill>
+      {/* 6. Divisor diagonal luminoso */}
+      {t5 > 0.004 && t5 < 0.996 ? (
+        <div style={{ position: "absolute", inset: 0, opacity: fade5 }}>
+          <DiagonalDivider x={diagX} />
+        </div>
       ) : null}
     </AbsoluteFill>
   );

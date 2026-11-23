@@ -1,41 +1,50 @@
 /**
- * episodeConfig.ts — Smile Dog (smile.jpg) Lore & Modern Retakes
+ * episodeConfig.ts — Eyeless Jack Lore & Modern Retakes (Estándar v5)
  *
  * Metadatos maestros de la composición:
- * duración dinámica, FPS y límites exactos de las 5 escenas.
+ * duración dinámica, FPS, límites exactos de las 6 escenas y cues sonoros.
  */
 
-export const COMP_ID = "SmileDogLoreShort";
+export const COMP_ID = "EyelessJackLoreShort";
 
 export const FPS = 30;
 export const WIDTH = 1080;
 export const HEIGHT = 1920;
 
-export const NARRATION_DURATION_SEC = 51.252;
-export const MUSIC_DURATION_SEC = 53.252;
+export const NARRATION_DURATION_SEC = 88.529;
+export const MUSIC_DURATION_SEC = 105.038;
 
 /** 45 frames = 1.5 s de cierre atmosférico tras la locución. */
 export const OUTRO_HOLD_FRAMES = 45;
 
-/** ceil(51.252 * 30) + 45 = 1538 + 45 = 1583 frames (~52.77 s). */
+/** ceil(88.529 * 30) + 45 = 2701 frames (~90.03 s). */
 export const TOTAL_FRAMES =
   Math.ceil(NARRATION_DURATION_SEC * FPS) + OUTRO_HOLD_FRAMES;
 
 /**
- * Límites exactos de las 5 escenas (frames globales @ 30 fps).
- *
- * 1. Hook — smile.jpg y el flash            : 0     – 489   (0.00s – 16.30s)
- * 2. Lore clásico — Mary y el disquete      : 489   – 846   (16.30s – 28.20s)
- * 3. Retake psicológico — Correos y duelo   : 846   – 1113  (28.20s – 37.10s)
- * 4. Retake biológico — Bosque e infección  : 1113  – 1347  (37.10s – 44.90s)
- * 5. Cierre perturbador — Close-up final    : 1347  – 1583  (44.90s – 52.77s)
+ * Límites exactos de las 6 escenas (frames globales @ 30 fps).
+ * 1. La Historia Original (Mitch y Edwin)      : 0 – 1023 (0.00s – 34.10s)
+ * 2. DeviantArt 2009 y los Tres Orígenes       : 1023 – 1489 (34.10s – 49.63s)
+ * 3. El Ritual de Chernobog (Jack Nyras)       : 1489 – 1723 (49.63s – 57.43s)
+ * 4. Retake 1 — El Depredador Nocturno        : 1723 – 1981 (57.43s – 66.03s)
+ * 5. Retake 2 — La Agonía de Jack Nyras       : 1981 – 2374 (66.03s – 79.13s)
+ * 6. Cierre y Debate — ¿Monstruo o Víctima?   : 2374 – 2701 (79.13s – 90.03s)
  */
 export const SCENES = {
-  scene1: { start: 0, end: 489 },
-  scene2: { start: 489, end: 846 },
-  scene3: { start: 846, end: 1113 },
-  scene4: { start: 1113, end: 1347 },
-  scene5: { start: 1347, end: TOTAL_FRAMES },
+  scene1: { start: 0, end: 1023 },
+  scene2: { start: 1023, end: 1489 },
+  scene3: { start: 1489, end: 1723 },
+  scene4: { start: 1723, end: 1981 },
+  scene5: { start: 1981, end: 2374 },
+  scene6: { start: 2374, end: TOTAL_FRAMES },
+} as const;
+
+/** Cues exactos para SFX e impactos narrativos (frames globales). */
+export const SFX_CUES = {
+  cameraShutterFrame: 794,
+  ritualDripFrame: 1649,
+  windowHeartbeatFrame: 2302,
+  outroBoomFrame: 2374,
 } as const;
 
 /** Zona segura horizontal (YouTube Shorts): x útil [64, 918], centrado 540. */
