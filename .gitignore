@@ -3,6 +3,7 @@ node_modules/
 
 # Preview & temporary renders
 .preview/
+.prompts/
 *.mp4
 *.tmp
 *.bak

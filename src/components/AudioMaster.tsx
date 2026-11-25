@@ -4,19 +4,23 @@ import { TRANSCRIPT_WORDS } from "../data/transcript";
 import { FPS, NARRATION_DURATION_SEC, TOTAL_FRAMES } from "../data/episodeConfig";
 
 /**
- * AudioMaster — Mezcla de audio del episodio:
+ * AudioMaster — Mezcla de audio del episodio Tails Doll (Sonic R / 1997).
+ *
  *  - narracion.mp3 al volumen 1.0 constante,
- *  - musica_terror.mp3 con ducking: 0.12 con voz activa, subida suave a
- *    0.35 en pausas (>= 0.40s) y en el cierre final (frames 1526–1583),
- *    con fundido limpio a 0.0 en los últimos 18 frames (1565–1583),
- *  - SFX con <Sequence> + <Audio> en cortes e impactos.
+ *  - musica_terror.mp3 con ducking audible Estándar v6:
+ *      0.28 durante voz activa, subida suave a 0.52 en pausas dramáticas
+ *      (>= 0.38s) y en el cierre final, con fundido limpio a 0.0 en los
+ *      últimos 22 frames (TOTAL_FRAMES - 22 → TOTAL_FRAMES),
+ *  - 4 SFX temáticos de Tails Doll (gem_pulse, crt_static_zoom, disc_eject,
+ *    deep_boom) con <Sequence> + <Audio> en revelaciones, transiciones e
+ *    impactos puntuales.
  */
 
-const MUSIC_VOICE = 0.12;
-const MUSIC_PAUSE = 0.35;
-const MIN_PAUSE_SEC = 0.4;
-const FINAL_FADE_START = 1565;
-const FINAL_FADE_END = 1583;
+const MUSIC_VOICE = 0.28;
+const MUSIC_PAUSE = 0.52;
+const MIN_PAUSE_SEC = 0.38;
+const FINAL_FADE_START = TOTAL_FRAMES - 22;
+const FINAL_FADE_END = TOTAL_FRAMES;
 
 const LAST_WORD_END = TRANSCRIPT_WORDS.reduce(
   (max, w) => Math.max(max, w.end),
@@ -82,7 +86,7 @@ const SMOOTHED_TARGETS: number[] = (() => {
 
 /**
  * Volumen de la música para un frame dado.
- * Ducking 0.12 (voz) ↔ 0.35 (pausas y cierre), fundido final a 0.0.
+ * Ducking 0.28 (voz) ↔ 0.52 (pausas y cierre), fundido final a 0.0.
  */
 export const computeDuckedMusicVolume = (
   frame: number,
@@ -117,37 +121,51 @@ export const AudioMaster: React.FC = () => {
         volume={(f) => computeDuckedMusicVolume(f)}
       />
 
-      {/* SFX: flash de cámara */}
-      <Sequence from={136}>
-        <Audio src={staticFile("sfx/camera_flash.mp3")} volume={0.58} />
+      {/* SFX: gema roja (revelaciones + Gem-Dive + clímax) */}
+      <Sequence from={440}>
+        <Audio src={staticFile("sfx/gem_pulse.mp3")} volume={0.48} />
       </Sequence>
-      <Sequence from={258}>
-        <Audio src={staticFile("sfx/camera_flash.mp3")} volume={0.38} />
+      <Sequence from={585}>
+        <Audio src={staticFile("sfx/gem_pulse.mp3")} volume={0.62} />
       </Sequence>
-      <Sequence from={1346}>
-        <Audio src={staticFile("sfx/camera_flash.mp3")} volume={0.48} />
+      <Sequence from={2260}>
+        <Audio src={staticFile("sfx/gem_pulse.mp3")} volume={0.58} />
       </Sequence>
-
-      {/* SFX: estática VHS en cortes de acto */}
-      <Sequence from={486}>
-        <Audio src={staticFile("sfx/vhs_glitch.mp3")} volume={0.42} />
-      </Sequence>
-      <Sequence from={844}>
-        <Audio src={staticFile("sfx/vhs_glitch.mp3")} volume={0.36} />
-      </Sequence>
-      <Sequence from={1110}>
-        <Audio src={staticFile("sfx/vhs_glitch.mp3")} volume={0.42} />
+      <Sequence from={2430}>
+        <Audio src={staticFile("sfx/gem_pulse.mp3")} volume={0.5} />
       </Sequence>
 
-      {/* SFX: golpe subgrave en revelaciones clave */}
-      <Sequence from={422}>
-        <Audio src={staticFile("sfx/deep_growl_boom.mp3")} volume={0.45} />
+      {/* SFX: estática CRT en transiciones de zoom continuo */}
+      <Sequence from={608}>
+        <Audio src={staticFile("sfx/crt_static_zoom.mp3")} volume={0.52} />
       </Sequence>
-      <Sequence from={1272}>
-        <Audio src={staticFile("sfx/deep_growl_boom.mp3")} volume={0.58} />
+      <Sequence from={1390}>
+        <Audio src={staticFile("sfx/crt_static_zoom.mp3")} volume={0.56} />
       </Sequence>
-      <Sequence from={1462}>
-        <Audio src={staticFile("sfx/deep_growl_boom.mp3")} volume={0.62} />
+      <Sequence from={1752}>
+        <Audio src={staticFile("sfx/crt_static_zoom.mp3")} volume={0.54} />
+      </Sequence>
+      <Sequence from={2180}>
+        <Audio src={staticFile("sfx/crt_static_zoom.mp3")} volume={0.54} />
+      </Sequence>
+
+      {/* SFX: bandeja PS2 expulsando el disco por sí solo */}
+      <Sequence from={2120}>
+        <Audio src={staticFile("sfx/disc_eject.mp3")} volume={0.68} />
+      </Sequence>
+
+      {/* SFX: golpe subgrave en hitos trágicos y cierre */}
+      <Sequence from={788}>
+        <Audio src={staticFile("sfx/deep_boom.mp3")} volume={0.54} />
+      </Sequence>
+      <Sequence from={1050}>
+        <Audio src={staticFile("sfx/deep_boom.mp3")} volume={0.56} />
+      </Sequence>
+      <Sequence from={2328}>
+        <Audio src={staticFile("sfx/deep_boom.mp3")} volume={0.65} />
+      </Sequence>
+      <Sequence from={2535}>
+        <Audio src={staticFile("sfx/deep_boom.mp3")} volume={0.52} />
       </Sequence>
     </>
   );
