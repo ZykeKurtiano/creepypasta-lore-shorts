@@ -1,32 +1,24 @@
 import React from "react";
-import {
-  AbsoluteFill,
-  Easing,
-  interpolate,
-  Sequence,
-  useCurrentFrame,
-  useVideoConfig,
-} from "remotion";
+import { AbsoluteFill, Sequence } from "remotion";
 import { AudioMaster } from "./components/AudioMaster";
-import { Camera25D } from "./components/Camera25D";
 import { KineticSubtitles } from "./components/KineticSubtitles";
 import { SceneTransitions } from "./components/SceneTransitions";
 import { VhsPostProcess } from "./components/VhsPostProcess";
-import { TOTAL_FRAMES } from "./data/episodeConfig";
-import { Scene1CrtHook } from "./scenes/Scene1CrtHook";
-import { Scene2MaryBedroom } from "./scenes/Scene2MaryBedroom";
-import { Scene3RetroEmailRetake } from "./scenes/Scene3RetroEmailRetake";
-import { Scene4BiologicalForest } from "./scenes/Scene4BiologicalForest";
-import { Scene5ChillingOutro } from "./scenes/Scene5ChillingOutro";
+import { SCENES } from "./data/episodeConfig";
+import { Scene1WakeupBed } from "./scenes/Scene1WakeupBed";
+import { Scene2Archive2003 } from "./scenes/Scene2Archive2003";
+import { Scene3AnatomyForest } from "./scenes/Scene3AnatomyForest";
+import { Scene4FamilyRecorder } from "./scenes/Scene4FamilyRecorder";
+import { Scene5ItalyParasite } from "./scenes/Scene5ItalyParasite";
+import { Scene6SplitDebate } from "./scenes/Scene6SplitDebate";
 
 /**
- * MainComposition — Orquestador maestro.
+ * MainComposition — Orquestador maestro (The Rake / El Rastrillo).
  *
- * Monta las 5 escenas 2.5D en <Sequence>, envuelve cada una con la
- * Camera25D (handheld + zoom punches), ejecuta las transiciones
- * dinámicas entre escenas (deslizamiento whip-pan real sobre las dos
- * escenas implicadas) y apila encima subtítulos, post-proceso VHS y
- * la mezcla de audio.
+ * Monta las 6 escenas 2.5D en <Sequence> (sin el viejo Camera25D de Smile Dog:
+ * cada escena controla su propia cámara multi-plano y Macro-Zooms con total
+ * precisión) y apila encima transiciones ancladas a objetos, subtítulos
+ * cinéticos, post-proceso VHS y la mezcla de audio.
  */
 
 interface SceneSpec {
@@ -36,63 +28,25 @@ interface SceneSpec {
 }
 
 const SCENE_SPECS: SceneSpec[] = [
-  { start: 0, end: 489, Component: Scene1CrtHook },
-  { start: 489, end: 846, Component: Scene2MaryBedroom },
-  { start: 846, end: 1113, Component: Scene3RetroEmailRetake },
-  { start: 1113, end: 1347, Component: Scene4BiologicalForest },
-  { start: 1347, end: TOTAL_FRAMES, Component: Scene5ChillingOutro },
+  { start: SCENES.scene1.start, end: SCENES.scene1.end, Component: Scene1WakeupBed },
+  { start: SCENES.scene2.start, end: SCENES.scene2.end, Component: Scene2Archive2003 },
+  { start: SCENES.scene3.start, end: SCENES.scene3.end, Component: Scene3AnatomyForest },
+  { start: SCENES.scene4.start, end: SCENES.scene4.end, Component: Scene4FamilyRecorder },
+  { start: SCENES.scene5.start, end: SCENES.scene5.end, Component: Scene5ItalyParasite },
+  { start: SCENES.scene6.start, end: SCENES.scene6.end, Component: Scene6SplitDebate },
 ];
 
-/** Fronteras con whip-pan: duración del barrido en frames. */
-const WHIP_WINDOWS: Record<number, number> = {
-  846: 10,
-  1113: 12,
-};
-
 export const MainComposition: React.FC = () => {
-  const frame = useCurrentFrame();
-  const { width } = useVideoConfig();
-
   return (
     <AbsoluteFill style={{ backgroundColor: "#040507" }}>
-      {/* Escenas con deslizamiento whip-pan real en las fronteras */}
-      {SCENE_SPECS.map(({ start, end, Component }, i) => {
-        const whipIn = WHIP_WINDOWS[start] ?? 0;
-        const whipOut = WHIP_WINDOWS[end] ?? 0;
-        if (frame < start || frame >= end + whipOut) {
-          return null;
-        }
+      {/* Escenas 2.5D (tiempo local exacto desde cada start) */}
+      {SCENE_SPECS.map(({ start, end, Component }, i) => (
+        <Sequence key={i} from={start} durationInFrames={end - start}>
+          <Component />
+        </Sequence>
+      ))}
 
-        let tx = 0;
-        if (whipIn > 0 && frame < start + whipIn) {
-          tx = interpolate(frame, [start, start + whipIn], [width, 0], {
-            easing: Easing.in(Easing.cubic),
-            extrapolateLeft: "clamp",
-            extrapolateRight: "clamp",
-          });
-        } else if (whipOut > 0 && frame >= end) {
-          tx = interpolate(frame, [end, end + whipOut], [0, -width * 0.65], {
-            easing: Easing.out(Easing.cubic),
-            extrapolateLeft: "clamp",
-            extrapolateRight: "clamp",
-          });
-        }
-
-        return (
-          <AbsoluteFill
-            key={i}
-            style={{ transform: `translateX(${tx}px)`, overflow: "hidden" }}
-          >
-            <Sequence from={start} durationInFrames={end - start + whipOut}>
-              <Camera25D sceneStart={start} sceneEnd={end}>
-                <Component />
-              </Camera25D>
-            </Sequence>
-          </AbsoluteFill>
-        );
-      })}
-
-      {/* Transiciones dinámicas entre escenas */}
+      {/* Transiciones ancladas a objetos */}
       <SceneTransitions />
 
       {/* Subtítulos cinéticos palabra por palabra */}
