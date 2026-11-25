@@ -8,16 +8,17 @@ import {
   staticFile,
   useCurrentFrame,
 } from "remotion";
-import { RakeModelRig } from "../components/characters/RakeModelRig";
-import { WitnessModelRig } from "../components/characters/WitnessModelRig";
+import { RakeCharacter } from "../components/characters/RakeCharacter";
+import { PatientVictimCharacter } from "../components/characters/PatientVictimCharacter";
 import { FONT_MONO, FONT_SANS, SafeCentered } from "../components/SafeZone";
 
 /**
  * Scene6SplitDebate (frames 2078–2375, 69.27–79.17s) — Cierre y Debate.
  *
  * Split-screen diagonal de alto contraste: leyenda ancestral (carmesí,
- * izquierda) vs. parásito mutante (cian, derecha). Pregunta cinética central
- * y cierre atmosférico con push-in, penumbra y destellos de ojos.
+ * izquierda) vs. parásito mutante (cian, derecha), ambos de cuerpo entero
+ * anclados a floorY. Pregunta cinética central y cierre atmosférico con
+ * push-in, resplandor carmesí y fade-out suave en los últimos 12 frames.
  */
 
 const CLAMP = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
@@ -69,10 +70,14 @@ export const Scene6SplitDebate: React.FC = () => {
   const outroOp = interpolate(frame, [175, 205], [0, 1], { ...CLAMP });
   const edgeDark = interpolate(frame, [175, 297], [0, 0.7], { ...CLAMP });
   const glintOp = interpolate(frame, [245, 262, 285], [0, 1, 1], { ...CLAMP });
-  const fadeOut = interpolate(frame, [285, 297], [0, 0.7], { ...CLAMP });
+  // Fade-out suave en los últimos 12 frames (285–297).
+  const fadeOut = interpolate(frame, [285, 297], [0, 0.9], { ...CLAMP });
 
   // Latido suave de la línea divisoria.
   const linePulse = 0.82 + 0.18 * Math.sin(frame * 0.12);
+
+  // Garras "vivas" del Rake (clawFlex orgánico).
+  const clawFlex = 0.3 + 0.25 * Math.sin(frame * 0.13);
 
   // Destellos de ojos (penumbra inferior) con parpadeo determinista.
   const glintFlickerL = 0.6 + 0.4 * Math.abs(Math.sin(frame * 0.5));
@@ -111,51 +116,29 @@ export const Scene6SplitDebate: React.FC = () => {
           />
         </div>
 
-        {/* 2. Lado izquierdo: The Rake (leyenda ancestral) */}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            WebkitMaskImage:
-              "linear-gradient(to bottom, black 70%, transparent 100%)",
-            maskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
-          }}
-        >
-          <RakeModelRig
-            variant="crouched"
-            width={560}
-            x={270}
-            y={1610}
-            eyeGlow={1}
-            eyeColor="#FDE047"
-            rimColor="rgba(220,38,38,0.75)"
-            breathingIntensity={0.9}
-            spasmIntensity={0.15}
-            showFloorShadow
-          />
-        </div>
+        {/* 2. Lado izquierdo: The Rake (leyenda ancestral, cuerpo entero) */}
+        <RakeCharacter
+          x={265}
+          floorY={1620}
+          scale={1.35}
+          mode="crouch_watch"
+          lookTarget={{ x: 0.7, y: -0.1 }}
+          mouthOpen={0.35}
+          clawFlex={clawFlex}
+          rimColor="#DC2626"
+          eyeGlowColor="#FDE047"
+        />
 
-        {/* 3. Lado derecho: paciente mutado */}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            WebkitMaskImage:
-              "linear-gradient(to bottom, black 70%, transparent 100%)",
-            maskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
-          }}
-        >
-          <WitnessModelRig
-            variant="patient_mutated"
-            width={560}
-            x={810}
-            y={1610}
-            mutationEyeDarkness={1}
-            panicLevel={0.5}
-            rimColor="rgba(34,211,238,0.75)"
-            showFloorShadow
-          />
-        </div>
+        {/* 3. Lado derecho: paciente mutado (cuerpo entero) */}
+        <PatientVictimCharacter
+          x={815}
+          floorY={1620}
+          scale={1.35}
+          mutationProgress={1}
+          spasmIntensity={0.35}
+          lookTarget={{ x: -0.6, y: -0.1 }}
+          rimColor="#22D3EE"
+        />
 
         {/* 4. Línea diagonal luminosa divisoria */}
         <svg
@@ -242,7 +225,7 @@ export const Scene6SplitDebate: React.FC = () => {
       </div>
 
       {/* Pregunta cinética central */}
-      <SafeCentered top={520} zIndex={8}>
+      <SafeCentered top={500} zIndex={8}>
         <div
           style={{
             transform: `scale(${questionPop.toFixed(3)})`,
@@ -267,19 +250,20 @@ export const Scene6SplitDebate: React.FC = () => {
 
       {/* Cierre final: subtítulo diegético + penumbra + destellos */}
       <div style={{ opacity: outroOp, pointerEvents: "none" }}>
-        {/* Subtítulo sutil */}
-        <SafeCentered top={1090} zIndex={8}>
+        {/* Pregunta de cierre (encima de subtítulos, top 1085) */}
+        <SafeCentered top={1085} zIndex={8}>
           <div
             style={{
               fontFamily: FONT_MONO,
-              fontWeight: 700,
+              fontWeight: 800,
               letterSpacing: 4,
-              fontSize: 24,
-              color: "rgba(242,239,233,0.75)",
-              textShadow: "0 3px 14px rgba(0,0,0,0.9)",
+              fontSize: 26,
+              color: "#F2EFE9",
+              textShadow:
+                "0 0 22px rgba(220,38,38,0.5), 0 3px 14px rgba(0,0,0,0.9)",
             }}
           >
-            ¿REVISARÍAS LOS PIES DE TU CAMA?
+            ¿REVISARÍAS LOS PIES DE TU CAMA ESTA NOCHE?
           </div>
         </SafeCentered>
 
@@ -322,7 +306,7 @@ export const Scene6SplitDebate: React.FC = () => {
         }}
       />
 
-      {/* Fade-out sutil final */}
+      {/* Fade-out suave final (últimos 12 frames) */}
       <AbsoluteFill
         style={{ background: "#000000", opacity: fadeOut, pointerEvents: "none" }}
       />

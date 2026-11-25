@@ -8,17 +8,17 @@ import {
   staticFile,
   useCurrentFrame,
 } from "remotion";
-import { RakeModelRig } from "../components/characters/RakeModelRig";
+import { RakeCharacter } from "../components/characters/RakeCharacter";
 import { FONT_MONO } from "../components/SafeZone";
 
 /**
  * Scene3AnatomyForest (frames 853–1089, 28.43–36.30s) — Anatomía de la
- * criatura en el bosque de pinos del norte de Nueva York.
+ * criatura en el bosque de pinos del norte.
  *
- * 3 planos: Plano Medio-General entre niebla (callouts anatómicos) →
- * Macro-Zoom 2.7x a las cuencas vacías (retícula OPTIC CAVITIES) →
- * Macro-Zoom 2.8x a las garras (retícula CLAWS + rasguños, preparando
- * el Claw-Swipe Wipe hacia Escena 4).
+ * 3 planos: Plano General-Medio entre niebla (callouts anatómicos) →
+ * Macro-Zoom 2.6x a las cuencas vacías (retícula CUENCAS VACÍAS) →
+ * Macro-Zoom 2.6x a la mano con garras (retícula GARRAS ALARGADAS +
+ * zarpazos), enlazando con el Claw-Swipe Wipe hacia Escena 4.
  */
 
 const CLAMP = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
@@ -26,9 +26,11 @@ const CLAMP = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 const OX = 540;
 const OY = 960;
 
-// Puntos anatómicos en coordenadas del lienzo (modelo closeup_claws).
-const FACE = { x: 539, y: 628 }; // cuencas negras vacías
-const HANDS = { x: 813, y: 1059 }; // manos con garras
+// Anclas anatómicas en coordenadas de mundo (RakeCharacter scale 1.75,
+// floorY 1540): cuencas negras vacías y mano delantera con garras.
+const FACE = { x: 540, y: 987 };
+const HANDS = { x: 666, y: 1418 };
+const BODY = { x: 540, y: 1076 };
 
 const SPORES = Array.from({ length: 30 }, (_, i) => ({
   x: random(i * 3 + 1) * 1080,
@@ -128,79 +130,50 @@ export const Scene3AnatomyForest: React.FC = () => {
   const frame = useCurrentFrame();
 
   // --- Coreografía de cámara en 3 planos -----------------------------
-  const s =
-    frame < 96
-      ? interpolate(frame, [0, 96], [1, 1.15], {
-          easing: Easing.out(Easing.cubic),
-          ...CLAMP,
-        })
-      : frame < 152
-        ? interpolate(frame, [96, 152], [1.15, 2.7], {
-            easing: Easing.inOut(Easing.cubic),
-            ...CLAMP,
-          })
-        : interpolate(frame, [152, 236], [2.7, 2.8], {
-            easing: Easing.inOut(Easing.cubic),
-            ...CLAMP,
-          });
+  let s: number;
+  let px: number;
+  let py: number;
 
-  const px =
-    frame < 96
-      ? OX
-      : frame < 152
-        ? interpolate(frame, [96, 152], [OX, FACE.x], {
-            easing: Easing.inOut(Easing.cubic),
-            ...CLAMP,
-          })
-        : interpolate(frame, [152, 236], [FACE.x, HANDS.x], {
-            easing: Easing.inOut(Easing.cubic),
-            ...CLAMP,
-          });
+  if (frame < 96) {
+    s = interpolate(frame, [0, 96], [1, 1.14], {
+      easing: Easing.out(Easing.cubic),
+      ...CLAMP,
+    });
+    px = OX;
+    py = OY;
+  } else if (frame < 152) {
+    s = interpolate(frame, [96, 152], [1.14, 2.6], {
+      easing: Easing.inOut(Easing.cubic),
+      ...CLAMP,
+    });
+    px = OX;
+    py = interpolate(frame, [96, 152], [OY, FACE.y], {
+      easing: Easing.inOut(Easing.cubic),
+      ...CLAMP,
+    });
+  } else {
+    s = 2.6;
+    px = interpolate(frame, [152, 236], [FACE.x, HANDS.x], {
+      easing: Easing.inOut(Easing.cubic),
+      ...CLAMP,
+    });
+    py = interpolate(frame, [152, 236], [FACE.y, HANDS.y], {
+      easing: Easing.inOut(Easing.cubic),
+      ...CLAMP,
+    });
+  }
 
-  const py =
-    frame < 96
-      ? OY
-      : frame < 152
-        ? interpolate(frame, [96, 152], [OY, FACE.y], {
-            easing: Easing.inOut(Easing.cubic),
-            ...CLAMP,
-          })
-        : interpolate(frame, [152, 236], [FACE.y, HANDS.y], {
-            easing: Easing.inOut(Easing.cubic),
-            ...CLAMP,
-          });
+  const TX = OX - px * s;
+  const TY = OY - py * s;
 
-  const sx =
-    frame < 152
-      ? OX
-      : interpolate(frame, [152, 236], [OX, 560], {
-          easing: Easing.inOut(Easing.cubic),
-          ...CLAMP,
-        });
-
-  const sy =
-    frame < 96
-      ? OY
-      : frame < 152
-        ? interpolate(frame, [96, 152], [OY, 640], {
-            easing: Easing.inOut(Easing.cubic),
-            ...CLAMP,
-          })
-        : interpolate(frame, [152, 236], [640, 1040], {
-            easing: Easing.inOut(Easing.cubic),
-            ...CLAMP,
-          });
-
-  const TX = sx - (px * s + OX * (1 - s));
-  const TY = sy - (py * s + OY * (1 - s));
-
-  // Posición en pantalla de los puntos anatómicos (screen = (q - p)*s + S).
-  const faceSX = (FACE.x - px) * s + sx;
-  const faceSY = (FACE.y - py) * s + sy;
-  const handSX = (HANDS.x - px) * s + sx;
-  const handSY = (HANDS.y - py) * s + sy;
-  const bodySX = (540 - px) * s + sx;
-  const bodySY = (940 - py) * s + sy;
+  // Posición en pantalla de los puntos anatómicos.
+  const toScreen = (wx: number, wy: number) => ({
+    x: (wx - px) * s + OX,
+    y: (wy - py) * s + OY,
+  });
+  const faceS = toScreen(FACE.x, FACE.y);
+  const handS = toScreen(HANDS.x, HANDS.y);
+  const bodyS = toScreen(BODY.x, BODY.y);
 
   // --- Ventanas de los planos ---
   const calloutOp = interpolate(frame, [8, 40, 90, 100], [0, 1, 1, 0], {
@@ -211,8 +184,8 @@ export const Scene3AnatomyForest: React.FC = () => {
   });
   const clawOp = interpolate(frame, [152, 168], [0, 1], { ...CLAMP });
 
-  // --- Espasmos al mencionar las garras (local 149–225) ---
-  const spasm = interpolate(frame, [150, 225], [0.1, 0.7], { ...CLAMP });
+  // --- Dedos flexionándose dinámicamente + respiración profunda ------
+  const clawFlex = 0.35 + 0.25 * Math.sin(frame * 0.12);
 
   // --- Parallax de niebla (2 capas) ---
   const fogFarX = Math.sin(frame * 0.004) * 160 - 300;
@@ -228,7 +201,7 @@ export const Scene3AnatomyForest: React.FC = () => {
           transform: `translate(${TX.toFixed(2)}px, ${TY.toFixed(
             2
           )}px) scale(${s.toFixed(4)})`,
-          transformOrigin: "50% 50%",
+          transformOrigin: "0 0",
         }}
       >
         {/* 1. Background */}
@@ -237,10 +210,10 @@ export const Scene3AnatomyForest: React.FC = () => {
             src={staticFile("backgrounds/bg_s3.png")}
             style={{
               position: "absolute",
-              width: "112%",
-              height: "112%",
-              left: "-6%",
-              top: "-6%",
+              width: "108%",
+              height: "108%",
+              left: "-4%",
+              top: "-4%",
               objectFit: "cover",
             }}
           />
@@ -260,18 +233,17 @@ export const Scene3AnatomyForest: React.FC = () => {
           }}
         />
 
-        {/* 3. The Rake (closeup_claws) centrado */}
-        <RakeModelRig
-          variant="closeup_claws"
-          width={780}
+        {/* 3. The Rake de cuerpo entero en el claro lunar */}
+        <RakeCharacter
           x={540}
-          y={1350}
-          rimColor="rgba(147,197,253,0.55)"
-          breathingIntensity={1.2}
-          spasmIntensity={spasm}
-          eyeGlow={0.9}
-          eyeColor="#F8FAFC"
-          showFloorShadow
+          floorY={1540}
+          scale={1.75}
+          mode="crouch_watch"
+          lookTarget={{ x: 0.1, y: -0.15 }}
+          mouthOpen={0.12}
+          clawFlex={clawFlex}
+          rimColor="#38BDF8"
+          eyeGlowColor="#F8FAFC"
         />
 
         {/* 4. Niebla volumétrica cercana (parallax rápido) */}
@@ -345,27 +317,28 @@ export const Scene3AnatomyForest: React.FC = () => {
         <svg width="100%" height="100%" viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
           {/* PIEL PÁLIDA → torso */}
           <path
-            d={`M 240 540 L ${bodySX.toFixed(0)} ${bodySY.toFixed(0)}`}
+            d={`M 250 565 L ${bodyS.x.toFixed(0)} ${bodyS.y.toFixed(0)}`}
             stroke="rgba(242,239,233,0.55)"
             strokeWidth="1.5"
             fill="none"
           />
-          <circle cx={bodySX} cy={bodySY} r="5" fill="#F2EFE9" opacity="0.7" />
-          {/* SIN PELO / ENCORVADO → cabeza */}
+          <circle cx={bodyS.x} cy={bodyS.y} r="5" fill="#F2EFE9" opacity="0.7" />
+          {/* ENCORVADO / SIN PELO → cabeza */}
           <path
-            d={`M 820 470 L ${faceSX.toFixed(0)} ${faceSY.toFixed(0)}`}
+            d={`M 830 455 L ${faceS.x.toFixed(0)} ${faceS.y.toFixed(0)}`}
             stroke="rgba(242,239,233,0.55)"
             strokeWidth="1.5"
             fill="none"
           />
-          <circle cx={faceSX} cy={faceSY} r="5" fill="#F2EFE9" opacity="0.7" />
+          <circle cx={faceS.x} cy={faceS.y} r="5" fill="#F2EFE9" opacity="0.7" />
         </svg>
 
+        {/* Badge PIEL PÁLIDA (conectado a la línea guía del torso) */}
         <div
           style={{
             position: "absolute",
-            left: 70,
-            top: 520,
+            left: 64,
+            top: 540,
             textAlign: "left",
             fontFamily: FONT_MONO,
             fontWeight: 700,
@@ -376,50 +349,58 @@ export const Scene3AnatomyForest: React.FC = () => {
           }}
         >
           PIEL PÁLIDA
-          <div
-            style={{
-              marginTop: 4,
-              fontSize: 15,
-              letterSpacing: 3,
-              color: "rgba(147,197,253,0.85)",
-            }}
-          >
-            SIN PELO — ENCORVADO
-          </div>
+        </div>
+
+        {/* Badge ENCORVADO — SIN PELO (conectado a la línea guía de la cabeza) */}
+        <div
+          style={{
+            position: "absolute",
+            right: 64,
+            top: 420,
+            textAlign: "right",
+            fontFamily: FONT_MONO,
+            fontWeight: 700,
+            fontSize: 24,
+            letterSpacing: 2,
+            color: "#F2EFE9",
+            textShadow: "0 2px 10px rgba(0,0,0,0.9)",
+          }}
+        >
+          ENCORVADO — SIN PELO
         </div>
       </div>
 
       {/* Retícula de cuencas ópticas (Plano 2) */}
       <Reticle
-        x={faceSX}
-        y={faceSY}
+        x={faceS.x}
+        y={faceS.y}
         r={150}
-        label="OPTIC CAVITIES // HOLLOW"
-        sub="CUENCAS NEGRAS VACÍAS"
+        label="CUENCAS VACÍAS"
+        sub="SOCKETS · HOLLOW"
         opacity={opticOp}
         rotate={frame * 0.5}
       />
 
       {/* Retícula de garras (Plano 3) */}
       <Reticle
-        x={handSX}
-        y={handSY}
+        x={handS.x}
+        y={handS.y}
         r={170}
-        label="CLAWS // ELONGATED"
-        sub="GARRAS LARGUÍSIMAS"
+        label="GARRAS ALARGADAS"
+        sub="CLAWS · ELONGATED"
         opacity={clawOp}
         rotate={-frame * 0.4}
         color="#FDE047"
         labelAbove
       />
 
-      {/* Rasguños carmesí al decir "garras larguísimas" (191–225) */}
-      {frame >= 191 ? (
+      {/* Zarpazos carmesí al decir "garras larguísimas" (196–232) */}
+      {frame >= 196 ? (
         <svg width="100%" height="100%" viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
           {[0, 1, 2].map((k) => {
             const o = interpolate(
               frame,
-              [191 + k * 10, 199 + k * 10, 224 + k * 10],
+              [196 + k * 10, 204 + k * 10, 228 + k * 10],
               [0, 0.9, 0],
               { ...CLAMP }
             );

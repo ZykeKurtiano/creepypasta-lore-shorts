@@ -10,8 +10,8 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
-import { RakeModelRig } from "../components/characters/RakeModelRig";
-import { WitnessModelRig } from "../components/characters/WitnessModelRig";
+import { RakeCharacter } from "../components/characters/RakeCharacter";
+import { MotherWitnessCharacter } from "../components/characters/MotherWitnessCharacter";
 import { FONT_MONO, FONT_SANS, SafeCentered } from "../components/SafeZone";
 
 /**
@@ -19,8 +19,10 @@ import { FONT_MONO, FONT_SANS, SafeCentered } from "../components/SafeZone";
  * y Grabadora Nocturna.
  *
  * Tres sub-bloques con su propia coreografía de cámara:
- *  A (local 0–248)   : el encuentro a 30 cm (madre en pánico + The Rake).
- *  B (local 248–325) : el ataque en el pasillo (lunge + destello carmesí).
+ *  A (local 0–248)   : el encuentro a 30 cm (madre en pánico + The Rake
+ *                      crawl_fast → crouch_watch + Macro-Zoom 2.3x).
+ *  B (local 248–325) : el ataque en el pasillo (lunge_attack + destello
+ *                      carmesí + micro-sacudida 260–270).
  *  C (local 325–516) : grabadora nocturna + espectrograma en vivo + salida
  *                      Waveform Dive-Through (494–516).
  */
@@ -30,12 +32,17 @@ const CLAMP = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 const OX = 540;
 const OY = 960;
 
-/** Rostro de la madre (bed_panic) en coordenadas de mundo. */
-const MF = { x: 323, y: 831 };
-/** Altura del rostro del Rake agazapado (su x avanza con el tiempo). */
-const RF_Y = 883;
-/** Grabadora plateada en la mano del testigo (recorder). */
-const REC = { x: 414, y: 1078 };
+/** Madre en pánico (standing_terror) y su rostro (world). */
+const MOTHER_X = 310;
+const MOTHER_FLOOR = 1520;
+const MF = { x: 310, y: 1170 };
+/** Línea horizontal de la cota "30 CM" entre ambos rostros. */
+const RF_Y = 1175;
+/** Punto de encuadre del plano de la grabadora (holding_recorder: floorY
+ *  1740, scale 1.55): centra entre el rostro agotado (world ~1123) y las
+ *  manos sobre la grabadora (world ~1329) para que ambos + el espectrograma
+ *  queden visibles sin solaparse. */
+const REC = { x: 540, y: 1280 };
 
 const BARS = 36;
 
@@ -52,91 +59,93 @@ export const Scene4FamilyRecorder: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  // --- Coreografía de cámara en 9 tramos -----------------------------
+  // --- Coreografía de cámara en 3 sub-bloques -------------------------
   let s: number;
   let px: number;
   let py: number;
 
   if (frame < 90) {
-    s = interpolate(frame, [0, 90], [1, 1.08], {
+    // Plano General del pasillo nocturno.
+    s = interpolate(frame, [0, 90], [1, 1.12], {
       easing: Easing.out(Easing.cubic),
       ...CLAMP,
     });
-    px = 540;
-    py = 960;
+    px = OX;
+    py = OY;
   } else if (frame < 160) {
-    s = interpolate(frame, [90, 160], [1.08, 1.28], {
+    // Push hacia las dos figuras (Rake aún acercándose).
+    s = interpolate(frame, [90, 160], [1.12, 1.3], {
       easing: Easing.inOut(Easing.cubic),
       ...CLAMP,
     });
-    px = interpolate(frame, [90, 160], [540, 452], {
+    px = interpolate(frame, [90, 160], [OX, 460], {
       easing: Easing.inOut(Easing.cubic),
       ...CLAMP,
     });
-    py = interpolate(frame, [90, 160], [960, 1000], {
+    py = interpolate(frame, [90, 160], [OY, 1080], {
       easing: Easing.inOut(Easing.cubic),
       ...CLAMP,
     });
   } else if (frame < 216) {
-    s = interpolate(frame, [160, 216], [1.28, 2.4], {
+    // Macro-Zoom 2.3x cara a cara.
+    s = interpolate(frame, [160, 216], [1.3, 2.3], {
       easing: Easing.inOut(Easing.cubic),
       ...CLAMP,
     });
-    px = 452;
-    py = 1000;
+    px = 435;
+    py = RF_Y;
   } else if (frame < 248) {
-    s = 2.4;
-    px = 452;
-    py = 1000;
+    s = 2.3;
+    px = 435;
+    py = RF_Y;
   } else if (frame < 260) {
-    s = interpolate(frame, [248, 260], [2.4, 1.05], {
+    // Retroceso rápido al pasillo (corte A→B).
+    s = interpolate(frame, [248, 260], [2.3, 1.1], {
       easing: Easing.out(Easing.cubic),
       ...CLAMP,
     });
-    px = interpolate(frame, [248, 260], [452, 540], {
+    px = interpolate(frame, [248, 260], [435, OX], {
       easing: Easing.out(Easing.cubic),
       ...CLAMP,
     });
-    py = interpolate(frame, [248, 260], [1000, 1080], {
+    py = interpolate(frame, [248, 260], [RF_Y, 1080], {
       easing: Easing.out(Easing.cubic),
       ...CLAMP,
     });
   } else if (frame < 325) {
-    s = interpolate(frame, [260, 325], [1.05, 1.18], {
+    // Acompaña el lunge a través del pasillo.
+    s = interpolate(frame, [260, 325], [1.1, 1.18], {
       easing: Easing.inOut(Easing.cubic),
       ...CLAMP,
     });
-    px = 540;
+    px = OX;
     py = 1080;
-  } else if (frame < 370) {
-    s = interpolate(frame, [325, 370], [1.18, 1.3], {
+  } else if (frame < 365) {
+    // Corte limpio a plano medio de la madre con la grabadora.
+    s = interpolate(frame, [325, 365], [1.18, 1.4], {
       easing: Easing.out(Easing.cubic),
       ...CLAMP,
     });
-    px = 540;
-    py = interpolate(frame, [325, 370], [1080, 1000], {
-      easing: Easing.out(Easing.cubic),
-      ...CLAMP,
-    });
-  } else if (frame < 445) {
-    s = interpolate(frame, [370, 445], [1.3, 2.5], {
+    px = OX;
+    py = 1250;
+  } else if (frame < 475) {
+    // Zoom medio 1.8x encuadrando rostro + manos sobre la grabadora.
+    s = interpolate(frame, [365, 475], [1.4, 1.8], {
       easing: Easing.inOut(Easing.cubic),
       ...CLAMP,
     });
-    px = interpolate(frame, [370, 445], [540, REC.x], {
-      easing: Easing.inOut(Easing.cubic),
-      ...CLAMP,
-    });
-    py = interpolate(frame, [370, 445], [1000, REC.y], {
+    px = REC.x;
+    py = interpolate(frame, [365, 475], [1250, REC.y], {
       easing: Easing.inOut(Easing.cubic),
       ...CLAMP,
     });
   } else if (frame < 494) {
-    s = 2.5;
+    s = 1.8;
     px = REC.x;
     py = REC.y;
   } else {
-    s = interpolate(frame, [494, 516], [2.5, 4.2], {
+    // Waveform Dive-Through de salida: zoom exponencial 1.8 → 3.4.
+    s = interpolate(frame, [494, 516], [1.8, 3.4], {
       easing: Easing.in(Easing.cubic),
       ...CLAMP,
     });
@@ -149,40 +158,45 @@ export const Scene4FamilyRecorder: React.FC = () => {
   const shakeX = Math.sin(frame * 1.6) * 7 * impactEnv;
   const shakeY = Math.cos(frame * 1.3) * 5 * impactEnv;
 
-  const TX = (OX - px) * s + shakeX;
-  const TY = (OY - py) * s + shakeY;
+  const TX = OX - px * s + shakeX;
+  const TY = OY - py * s + shakeY;
 
   // --- Ventanas de sub-bloques ---
   const blockA = frame < 248;
   const blockB = frame >= 248 && frame < 325;
   const blockC = frame >= 325;
 
-  // --- Sub-bloque A: avance del Rake y cota 30 CM ---
-  const rakeX = interpolate(frame, [90, 200], [760, 560], {
+  // --- Sub-bloque A: avance del Rake + cota 30 CM ---
+  const rakeX = interpolate(frame, [0, 160], [860, 560], {
     easing: Easing.inOut(Easing.cubic),
     ...CLAMP,
   });
-  const rakeFaceX = rakeX + 21;
+  const rakeMode = frame < 160 ? ("crawl_fast" as const) : ("crouch_watch" as const);
+  const rakeMouth = interpolate(frame, [160, 216], [0.2, 0.45], { ...CLAMP });
+  const rakeOpacity = interpolate(frame, [0, 30], [0.15, 0.95], { ...CLAMP });
   const measureOp = interpolate(frame, [158, 172, 240, 248], [0, 1, 1, 0], {
     ...CLAMP,
   });
-  const rakeEye = interpolate(frame, [90, 160], [0.3, 0.95], { ...CLAMP });
-  const rakeOpacity = interpolate(frame, [20, 90], [0.2, 0.95], { ...CLAMP });
 
   // --- Sub-bloque B: lunge ---
-  const lungeX = interpolate(frame, [248, 320], [1150, -180], {
+  const lungeX = interpolate(frame, [248, 322], [780, 180], {
     easing: Easing.in(Easing.cubic),
     ...CLAMP,
   });
-  const lungeScale = interpolate(frame, [248, 320], [0.95, 1.55], {
+  const lungeScale = interpolate(frame, [248, 322], [0.9, 1.4], {
     easing: Easing.in(Easing.cubic),
     ...CLAMP,
   });
   const crimsonCut = interpolate(frame, [248, 251, 256], [0, 1, 0], { ...CLAMP });
   const impactFlash = interpolate(frame, [260, 263, 272], [0, 1, 0], { ...CLAMP });
+  // La madre retrocede en pánico durante el ataque.
+  const motherRetreatX = interpolate(frame, [248, 322], [MOTHER_X, 250], {
+    easing: Easing.out(Easing.cubic),
+    ...CLAMP,
+  });
 
   // --- Sub-bloque C: grabadora + espectrograma ---
-  const recorderPulse = interpolate(frame, [325, 360], [0, 1], { ...CLAMP });
+  const recorderPulse = interpolate(frame, [325, 365], [0, 1], { ...CLAMP });
   const crimsonT = interpolate(frame, [405, 415, 495, 505], [0, 1, 1, 0], {
     ...CLAMP,
   });
@@ -197,6 +211,11 @@ export const Scene4FamilyRecorder: React.FC = () => {
     config: { damping: 14, stiffness: 150, mass: 0.7 },
   });
 
+  // Sello CASE FILE visible SOLO mientras local < 318 (jamás solapa el espectrograma).
+  const stampOp = interpolate(frame, [8, 20, 305, 318], [0, 1, 1, 0], {
+    ...CLAMP,
+  });
+
   return (
     <AbsoluteFill style={{ overflow: "hidden", backgroundColor: "#040507" }}>
       {/* Mundo 2.5D bajo la cámara */}
@@ -207,7 +226,7 @@ export const Scene4FamilyRecorder: React.FC = () => {
           transform: `translate(${TX.toFixed(2)}px, ${TY.toFixed(
             2
           )}px) scale(${s.toFixed(4)})`,
-          transformOrigin: "50% 50%",
+          transformOrigin: "0 0",
         }}
       >
         {/* 1. Background con sobrescala para parallax */}
@@ -262,27 +281,25 @@ export const Scene4FamilyRecorder: React.FC = () => {
         {/* 4. Sub-bloque A: madre + Rake + cota 30 CM */}
         {blockA ? (
           <>
-            <WitnessModelRig
-              variant="bed_panic"
-              width={680}
-              x={330}
-              y={1420}
-              panicLevel={0.95}
-              rimColor="rgba(125,211,252,0.4)"
-              showFloorShadow
+            <MotherWitnessCharacter
+              x={MOTHER_X}
+              floorY={MOTHER_FLOOR}
+              posture="standing_terror"
+              emotion="pure_terror"
+              lookTarget={{ x: 0.9, y: 0.1 }}
+              rimColor="#7DD3FC"
             />
-            <RakeModelRig
-              variant="crouched"
-              width={520}
+            <RakeCharacter
               x={rakeX}
-              y={1560}
+              floorY={1520}
+              flipX
               opacity={rakeOpacity}
-              eyeGlow={rakeEye}
-              eyeColor="#FDE047"
-              rimColor="rgba(148,197,255,0.4)"
-              breathingIntensity={0.9}
-              showFloorShadow
-              brightness={0.72}
+              mode={rakeMode}
+              lookTarget={{ x: -0.85, y: -0.2 }}
+              mouthOpen={rakeMouth}
+              clawFlex={0.35}
+              rimColor="#94C5FF"
+              eyeGlowColor="#FDE047"
             />
 
             {/* Cota cinética 30 CM entre la criatura y el rostro de la madre */}
@@ -301,18 +318,18 @@ export const Scene4FamilyRecorder: React.FC = () => {
                 <line
                   x1={MF.x}
                   y1={RF_Y}
-                  x2={rakeFaceX}
+                  x2={rakeX}
                   y2={RF_Y}
                   stroke="#FDE047"
                   strokeWidth="2.5"
                   strokeDasharray="8 6"
                 />
                 <line x1={MF.x} y1={RF_Y - 12} x2={MF.x} y2={RF_Y + 12} stroke="#FDE047" strokeWidth="3" />
-                <line x1={rakeFaceX} y1={RF_Y - 12} x2={rakeFaceX} y2={RF_Y + 12} stroke="#FDE047" strokeWidth="3" />
+                <line x1={rakeX} y1={RF_Y - 12} x2={rakeX} y2={RF_Y + 12} stroke="#FDE047" strokeWidth="3" />
                 <polygon points={`${MF.x},${RF_Y} ${MF.x + 15},${RF_Y - 8} ${MF.x + 15},${RF_Y + 8}`} fill="#FDE047" />
-                <polygon points={`${rakeFaceX},${RF_Y} ${rakeFaceX - 15},${RF_Y - 8} ${rakeFaceX - 15},${RF_Y + 8}`} fill="#FDE047" />
+                <polygon points={`${rakeX},${RF_Y} ${rakeX - 15},${RF_Y - 8} ${rakeX - 15},${RF_Y + 8}`} fill="#FDE047" />
                 <text
-                  x={(MF.x + rakeFaceX) / 2}
+                  x={(MF.x + rakeX) / 2}
                   y={RF_Y - 24}
                   textAnchor="middle"
                   fontFamily={FONT_MONO}
@@ -328,62 +345,76 @@ export const Scene4FamilyRecorder: React.FC = () => {
           </>
         ) : null}
 
-        {/* 5. Sub-bloque B: lunge explosivo con rastro de sombra */}
+        {/* 5. Sub-bloque B: lunge explosivo con rastro de movimiento */}
         {blockB ? (
           <>
-            <div
-              style={{
-                position: "absolute",
-                left: lungeX - 260,
-                top: 720,
-                width: 520,
-                height: 960,
-                background:
-                  "radial-gradient(ellipse, rgba(0,0,0,0.55), transparent 70%)",
-                filter: "blur(42px)",
-              }}
-            />
-            <RakeModelRig
-              variant="lunge"
-              width={760}
+            {/* Rastro de movimiento estilizado */}
+            {[0, 1, 2].map((k) => {
+              const trailX = lungeX + 60 + k * 70;
+              const trailOp = 0.22 * (1 - k * 0.28);
+              return (
+                <RakeCharacter
+                  key={k}
+                  x={trailX}
+                  floorY={1500}
+                  scale={lungeScale * (1 - k * 0.08)}
+                  flipX
+                  opacity={trailOp}
+                  mode="lunge_attack"
+                  mouthOpen={1}
+                  clawFlex={1}
+                  rimColor="#DC2626"
+                  eyeGlowColor="#DC2626"
+                />
+              );
+            })}
+            <RakeCharacter
               x={lungeX}
-              y={1500}
+              floorY={1500}
               scale={lungeScale}
               flipX
-              spasmIntensity={0.85}
-              eyeGlow={1}
-              eyeColor="#DC2626"
-              rimColor="rgba(220,38,38,0.75)"
-              showFloorShadow
-              brightness={0.85}
+              mode="lunge_attack"
+              lookTarget={{ x: -1, y: 0 }}
+              mouthOpen={1}
+              clawFlex={1}
+              rimColor="#DC2626"
+              eyeGlowColor="#DC2626"
+            />
+            {/* Madre retrocediendo en pure_terror */}
+            <MotherWitnessCharacter
+              x={motherRetreatX}
+              floorY={1520}
+              posture="standing_terror"
+              emotion="pure_terror"
+              lookTarget={{ x: -0.9, y: 0.05 }}
+              startleTriggerFrame={248}
+              rimColor="#F87171"
             />
           </>
         ) : null}
 
         {/* 6. Sub-bloque C: testigo con grabadora */}
         {blockC ? (
-          <WitnessModelRig
-            variant="recorder"
-            width={680}
+          <MotherWitnessCharacter
             x={540}
-            y={1420}
-            recorderPulse={recorderPulse}
-            panicLevel={0.35}
-            rimColor="rgba(125,211,252,0.45)"
-            showFloorShadow
+            floorY={1740}
+            scale={1.55}
+            posture="holding_recorder"
+            emotion="exhausted_focus"
+            lookTarget={{ x: 0, y: 0.4 }}
+            recorderGlow={recorderPulse}
+            rimColor="#7DD3FC"
           />
         ) : null}
       </div>
 
-      {/* Sello CASE FILE — NIAGARA 2003 (zona segura) */}
+      {/* Sello CASE FILE — NIAGARA 2003 (zona segura, hasta local 318) */}
       <SafeCentered top={330} zIndex={8}>
         <div
           style={{
             display: "inline-block",
             transform: `scale(${stampScale.toFixed(3)})`,
-            opacity: interpolate(frame, [8, 20, 305, 320], [0, 1, 1, 0], {
-              ...CLAMP,
-            }),
+            opacity: stampOp,
             fontFamily: FONT_MONO,
             fontWeight: 800,
             letterSpacing: 3,
@@ -396,7 +427,7 @@ export const Scene4FamilyRecorder: React.FC = () => {
             whiteSpace: "nowrap",
           }}
         >
-          CASE FILE <span style={{ color: "#DC2626" }}>—</span> NIAGARA 2003
+          CASO NIAGARA <span style={{ color: "#DC2626" }}>—</span> 2003
         </div>
       </SafeCentered>
 
@@ -424,7 +455,7 @@ export const Scene4FamilyRecorder: React.FC = () => {
         <div
           style={{
             position: "absolute",
-            top: 360,
+            top: 365,
             left: 0,
             right: 0,
             display: "flex",
@@ -462,10 +493,10 @@ export const Scene4FamilyRecorder: React.FC = () => {
                   0.16 +
                   0.5 * Math.abs(Math.sin(frame * 0.11 + i * 0.53)) +
                   0.28 * Math.abs(Math.sin(frame * 0.043 + i * 1.27));
-                const burst = random(Math.floor(frame / 2) * BARS + i);
+                const burst = 0.32 + 0.68 * Math.abs(Math.sin(frame * 0.5 + i * 0.9));
                 const h =
                   crimsonT > 0
-                    ? base * (1 - crimsonT) + (0.15 + burst * 0.9) * crimsonT
+                    ? base * (1 - crimsonT) + burst * crimsonT
                     : base;
                 const hh = Math.min(1, h);
                 const color = crimsonT > 0.3 ? "#DC2626" : "#22D3EE";
@@ -514,7 +545,7 @@ export const Scene4FamilyRecorder: React.FC = () => {
                   ).toFixed(2)}px)`,
                 }}
               >
-                «soy el Rastrillo»
+                «SOY EL RASTRILLO»
               </span>
             </div>
           </div>

@@ -10,7 +10,7 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
-import { RakeModelRig } from "../components/characters/RakeModelRig";
+import { RakeCharacter } from "../components/characters/RakeCharacter";
 import { FONT_MONO, FONT_SANS, SafeCentered } from "../components/SafeZone";
 
 /**
@@ -20,9 +20,9 @@ import { FONT_MONO, FONT_SANS, SafeCentered } from "../components/SafeZone";
  *  1. contador 2003 + mapa Noreste con pines de radar,
  *  2. apagón mediático (tiras de censura + sello MEDIA BLACKOUT),
  *  3. línea de tiempo 2003→2006 + hilos rojos a 1691/1964,
- *  4. bitácora 1691 + lupa circular 2.5x,
- *  5. carta 1964 + lupa circular 2.5x,
- *  6. revelación THE RAKE + salida Page-Flip Match-Cut.
+ *  4. bitácora 1691 + lupa circular 2.4x,
+ *  5. carta 1964 + lupa circular 2.4x,
+ *  6. revelación THE RAKE (RakeCharacter) + salida Page-Flip Match-Cut.
  */
 
 const CLAMP = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
@@ -278,7 +278,7 @@ const SuicideNote: React.FC<{
       <rect x="0" y="0" width="560" height="640" rx="6" fill="#E6D7A8" stroke="#9A8458" strokeWidth="2" />
       <ellipse cx="460" cy="560" rx="130" ry="70" fill="#CDB87E" opacity="0.5" />
       <text x="280" y="74" textAnchor="middle" fontFamily={FONT_MONO} fontSize="34" fill="#2E2313" fontWeight="700">
-        SUICIDE NOTE — 1964
+        CARTA DE SUICIDIO — 1964
       </text>
       <line x1="80" y1="98" x2="480" y2="98" stroke="#2E2313" strokeWidth="2" opacity="0.5" />
       {[
@@ -357,7 +357,7 @@ export const Scene2Archive2003: React.FC = () => {
     easing: Easing.inOut(Easing.cubic),
     ...CLAMP,
   });
-  const loupe1y = interpolate(frame, [380, 430], [620, 1080], {
+  const loupe1y = interpolate(frame, [380, 430], [620, 1040], {
     easing: Easing.inOut(Easing.cubic),
     ...CLAMP,
   });
@@ -379,16 +379,21 @@ export const Scene2Archive2003: React.FC = () => {
     easing: Easing.inOut(Easing.cubic),
     ...CLAMP,
   });
-  const loupe2y = interpolate(frame, [470, 515], [640, 1180], {
+  const loupe2y = interpolate(frame, [470, 515], [640, 1120], {
     easing: Easing.inOut(Easing.cubic),
     ...CLAMP,
   });
 
   // --- Micro-beat 6: THE RAKE ----------------------------------------
-  const rakeOpacity = interpolate(frame, [535, 600], [0, 0.88], {
+  const rakeOpacity = interpolate(frame, [535, 600], [0, 0.92], {
     easing: Easing.inOut(Easing.cubic),
     ...CLAMP,
   });
+  const rakeMouth = interpolate(frame, [535, 645], [0, 0.62], {
+    easing: Easing.inOut(Easing.cubic),
+    ...CLAMP,
+  });
+  const rakeClaw = 0.3 + 0.25 * Math.sin(frame * 0.13);
   const titlePop = spring({
     frame: frame - 605,
     fps,
@@ -447,10 +452,10 @@ export const Scene2Archive2003: React.FC = () => {
               src={staticFile("backgrounds/bg_s2.png")}
               style={{
                 position: "absolute",
-                width: "110%",
-                height: "110%",
-                left: "-5%",
-                top: "-5%",
+                width: "108%",
+                height: "108%",
+                left: "-4%",
+                top: "-4%",
                 objectFit: "cover",
               }}
             />
@@ -498,7 +503,7 @@ export const Scene2Archive2003: React.FC = () => {
           {/* --- Micro-Beat 1: 2003 + mapa Noreste --- */}
           <div style={{ opacity: mb1, pointerEvents: "none" }}>
             {/* Contador 2003 */}
-            <SafeCentered top={340} zIndex={6}>
+            <SafeCentered top={345} zIndex={6}>
               <div
                 style={{
                   fontFamily: FONT_SANS,
@@ -523,7 +528,7 @@ export const Scene2Archive2003: React.FC = () => {
                   opacity: 0.9,
                 }}
               >
-                NORTHEAST U.S. <span style={{ color: "#DC2626" }}>—</span> SIGHTINGS SPIKE
+                NORESTE EE.UU. <span style={{ color: "#DC2626" }}>—</span> OLEADA DE AVISTAMIENTOS
               </div>
             </SafeCentered>
 
@@ -531,7 +536,7 @@ export const Scene2Archive2003: React.FC = () => {
             <div
               style={{
                 position: "absolute",
-                top: 780,
+                top: 760,
                 left: 0,
                 right: 0,
                 display: "flex",
@@ -597,7 +602,7 @@ export const Scene2Archive2003: React.FC = () => {
                 />
               );
             })}
-            <Stamp text="MEDIA BLACKOUT" top={640} rotate={-6} scale={stampScale} opacity={mb2} />
+            <Stamp text="MEDIA BLACKOUT" top={620} rotate={-6} scale={stampScale} opacity={mb2} />
           </div>
 
           {/* --- Micro-Beat 3: línea de tiempo 2003 → 2006 --- */}
@@ -606,33 +611,33 @@ export const Scene2Archive2003: React.FC = () => {
               {/* Eje horizontal */}
               <line
                 x1="150"
-                y1="640"
+                y1="560"
                 x2="930"
-                y2="640"
+                y2="560"
                 stroke="#F2EFE9"
                 strokeWidth="3"
                 strokeDasharray="780"
                 strokeDashoffset={780 * (1 - timelineDraw)}
               />
-              <circle cx="150" cy="640" r="10" fill="#F2EFE9" />
-              <circle cx="930" cy="640" r="10" fill="#FDE047" />
-              <text x="150" y="610" textAnchor="middle" fontFamily={FONT_MONO} fontSize="30" fill="#F2EFE9" fontWeight="700">
+              <circle cx="150" cy="560" r="10" fill="#F2EFE9" />
+              <circle cx="930" cy="560" r="10" fill="#FDE047" />
+              <text x="150" y="530" textAnchor="middle" fontFamily={FONT_MONO} fontSize="30" fill="#F2EFE9" fontWeight="700">
                 2003
               </text>
-              <text x="930" y="610" textAnchor="middle" fontFamily={FONT_MONO} fontSize="30" fill="#FDE047" fontWeight="700">
+              <text x="930" y="530" textAnchor="middle" fontFamily={FONT_MONO} fontSize="30" fill="#FDE047" fontWeight="700">
                 2006
               </text>
               {/* Hilos rojos a 1691 y 1964 */}
-              <path d="M 300 640 C 300 760, 260 860, 320 960" fill="none" stroke="#DC2626" strokeWidth="2.5" strokeDasharray="6 6" opacity={timelineDraw} />
-              <path d="M 720 640 C 720 780, 760 900, 700 1020" fill="none" stroke="#DC2626" strokeWidth="2.5" strokeDasharray="6 6" opacity={timelineDraw} />
-              <text x="320" y="1000" textAnchor="middle" fontFamily={FONT_MONO} fontSize="34" fill="#FDE047" fontWeight="700">
+              <path d="M 300 560 C 300 700, 260 800, 320 900" fill="none" stroke="#DC2626" strokeWidth="2.5" strokeDasharray="6 6" opacity={timelineDraw} />
+              <path d="M 720 560 C 720 720, 760 840, 700 960" fill="none" stroke="#DC2626" strokeWidth="2.5" strokeDasharray="6 6" opacity={timelineDraw} />
+              <text x="320" y="950" textAnchor="middle" fontFamily={FONT_MONO} fontSize="34" fill="#FDE047" fontWeight="700">
                 1691
               </text>
-              <text x="700" y="1060" textAnchor="middle" fontFamily={FONT_MONO} fontSize="34" fill="#FDE047" fontWeight="700">
+              <text x="700" y="1010" textAnchor="middle" fontFamily={FONT_MONO} fontSize="34" fill="#FDE047" fontWeight="700">
                 1964
               </text>
             </svg>
-            <Stamp text="SURVIVOR ARCHIVE // 2006" top={1180} rotate={3} color="#FDE047" scale={archiveScale} opacity={mb3} />
+            <Stamp text="ARCHIVO DE SOBREVIVIENTES // 2006" top={1100} rotate={3} color="#FDE047" scale={archiveScale} opacity={mb3} />
           </div>
 
           {/* --- Micro-Beat 4: bitácora 1691 + lupa --- */}
@@ -650,7 +655,7 @@ export const Scene2Archive2003: React.FC = () => {
           {/* --- Micro-Beat 5: carta 1964 + lupa --- */}
           <div style={{ opacity: mb5 }}>
             <SuicideNote opacity={mb5} x={noteX} y={680} rot={noteRot} />
-            <Loupe x={loupe2x} y={loupe2y} r={150} opacity={mb5} text="“el Rastrillo… al pie de la cama”" label="1964 · SUICIDE NOTE" />
+            <Loupe x={loupe2x} y={loupe2y} r={150} opacity={mb5} text="“el Rastrillo… al pie de la cama”" label="1964 · SUICIDIO" />
           </div>
 
           {/* --- Micro-Beat 6: THE RAKE --- */}
@@ -658,24 +663,22 @@ export const Scene2Archive2003: React.FC = () => {
             {/* Oscurecimiento de documentos */}
             <AbsoluteFill style={{ background: "rgba(2,3,5,0.9)", opacity: docsDim * mb6 }} />
 
-            {/* Silueta de The Rake emergiendo tras la mesa */}
-            <RakeModelRig
-              variant="crouched"
-              width={480}
+            {/* The Rake emergiendo tras la mesa (cuerpo entero, floorY=1480) */}
+            <RakeCharacter
               x={540}
-              y={1580}
+              floorY={1480}
+              scale={1.3}
               opacity={rakeOpacity * mb6}
-              eyeGlow={1}
-              eyeColor="#DC2626"
-              rimColor="rgba(220,38,38,0.55)"
-              breathingIntensity={0.7}
-              spasmIntensity={0.2}
-              brightness={0.7}
-              showFloorShadow
+              mode="crouch_watch"
+              lookTarget={{ x: 0.15, y: -0.1 }}
+              mouthOpen={rakeMouth}
+              clawFlex={rakeClaw}
+              rimColor="#DC2626"
+              eyeGlowColor="#FDE047"
             />
 
             {/* Título monumental */}
-            <SafeCentered top={430} zIndex={8}>
+            <SafeCentered top={410} zIndex={8}>
               <div
                 style={{
                   display: "inline-block",

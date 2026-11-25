@@ -10,7 +10,7 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
-import { WitnessModelRig } from "../components/characters/WitnessModelRig";
+import { PatientVictimCharacter } from "../components/characters/PatientVictimCharacter";
 import { FONT_MONO, SafeCentered } from "../components/SafeZone";
 
 /**
@@ -18,10 +18,11 @@ import { FONT_MONO, SafeCentered } from "../components/SafeZone";
  * Parásito biológico documentado en una clínica aislada de Italia (2010).
  *
  * Micro-beats clínicos estilo Date un Short:
- *  1. Plano General del pasillo + sello RETAKE MODERNO + línea ECG.
- *  2. Sello ITALIA — 2010 + insignia QUARANTINE WARD + ECG acelerando.
- *  3. Lupa circular clínica (2.6x) sobre manos necróticas + rayos-X.
- *  4. Macro-Zoom 2.6x al rostro mutante + ECG carmesí (TRANSFORMACIÓN).
+ *  1. Plano General del pasillo + sello RETAKE MODERNO // BIO-HORROR + ECG.
+ *  2. Sello ITALIA — 2010 + insignia de riesgo biológico + ECG acelerando.
+ *  3. Lupa circular clínica translúcida (2.4x) sobre manos que mutan en vivo
+ *     + badges NECROSIS DÉRMICA / ELONGACIÓN ÓSEA (siempre sobre y=1180).
+ *  4. Macro-Zoom 2.4x al rostro en agonía + contador MUTACIÓN: 100%.
  */
 
 const CLAMP = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
@@ -29,10 +30,10 @@ const CLAMP = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 const OX = 540;
 const OY = 960;
 
-/** Manos necróticas del paciente (world). */
-const HANDS = { x: 670, y: 1026 };
+/** Manos necróticas alzadas del paciente (world, floorY 1520 scale 1.55). */
+const HANDS = { x: 540, y: 1115 };
 /** Rostro mutante del paciente (world). */
-const FACE = { x: 511, y: 648 };
+const FACE = { x: 540, y: 940 };
 
 const MIST = Array.from({ length: 20 }, (_, i) => ({
   x: random(i * 3 + 1) * 1080,
@@ -169,7 +170,7 @@ const ClinicalStamp: React.FC<{
   </SafeCentered>
 );
 
-/** Lupa clínica con retícula médica, rayos-X de falanges y etiquetas. */
+/** Lupa clínica translúcida (interior semitransparente) + badges arriba. */
 const ClinicalLoupe: React.FC<{
   x: number;
   y: number;
@@ -188,6 +189,7 @@ const ClinicalLoupe: React.FC<{
       pointerEvents: "none",
     }}
   >
+    {/* Interior translúcido (los dedos vectoriales mutan SIEMPRE a la vista) */}
     <div
       style={{
         position: "absolute",
@@ -195,14 +197,14 @@ const ClinicalLoupe: React.FC<{
         borderRadius: "50%",
         overflow: "hidden",
         background:
-          "radial-gradient(circle, rgba(34,211,238,0.12) 0%, rgba(6,24,34,0.34) 100%)",
-        boxShadow: "inset 0 0 30px rgba(34,211,238,0.18)",
+          "radial-gradient(circle, rgba(34,211,238,0.10) 0%, rgba(6,24,34,0.26) 100%)",
+        boxShadow: "inset 0 0 30px rgba(34,211,238,0.16)",
       }}
     >
       <svg width="100%" height="100%" viewBox="0 0 200 200">
         <defs>
           <radialGradient id="loupe-xray" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#22D3EE" stopOpacity="0.18" />
+            <stop offset="0%" stopColor="#22D3EE" stopOpacity="0.16" />
             <stop offset="100%" stopColor="#22D3EE" stopOpacity="0" />
           </radialGradient>
         </defs>
@@ -254,12 +256,26 @@ const ClinicalLoupe: React.FC<{
           "0 0 24px rgba(34,211,238,0.35), inset 0 0 8px rgba(0,0,0,0.5)",
       }}
     />
-    {/* Etiquetas compactas */}
+    {/* Reflejo de cristal */}
+    <div
+      style={{
+        position: "absolute",
+        top: r * 0.14,
+        left: r * 0.16,
+        width: r * 0.5,
+        height: r * 0.28,
+        borderRadius: "50%",
+        background:
+          "linear-gradient(135deg, rgba(255,255,255,0.35), rgba(255,255,255,0.03))",
+        transform: "rotate(-24deg)",
+      }}
+    />
+    {/* Badges de alto contraste (SIEMPRE encima de la lupa → sobre y=1180) */}
     <div
       style={{
         position: "absolute",
         left: "50%",
-        top: -40,
+        top: -r - 24,
         transform: "translateX(-50%)",
         fontFamily: FONT_MONO,
         fontWeight: 700,
@@ -280,7 +296,7 @@ const ClinicalLoupe: React.FC<{
       style={{
         position: "absolute",
         left: "50%",
-        top: r * 2 + 10,
+        top: -r - 66,
         transform: "translateX(-50%)",
         fontFamily: FONT_MONO,
         fontWeight: 700,
@@ -314,45 +330,39 @@ export const Scene5ItalyParasite: React.FC = () => {
       easing: Easing.out(Easing.cubic),
       ...CLAMP,
     });
-    px = 540;
-    py = 960;
+    px = OX;
+    py = OY;
   } else if (frame < 210) {
     s = interpolate(frame, [105, 210], [1.12, 1.25], {
       easing: Easing.inOut(Easing.cubic),
       ...CLAMP,
     });
-    px = 540;
+    px = OX;
     py = 980;
   } else if (frame < 315) {
-    s = interpolate(frame, [210, 315], [1.25, 1.75], {
+    s = interpolate(frame, [210, 315], [1.25, 1.65], {
       easing: Easing.inOut(Easing.cubic),
       ...CLAMP,
     });
-    px = interpolate(frame, [210, 315], [540, 590], {
-      easing: Easing.inOut(Easing.cubic),
-      ...CLAMP,
-    });
-    py = interpolate(frame, [210, 315], [980, 1000], {
+    px = OX;
+    py = interpolate(frame, [210, 315], [980, HANDS.y], {
       easing: Easing.inOut(Easing.cubic),
       ...CLAMP,
     });
   } else {
-    s = interpolate(frame, [315, 473], [1.75, 2.6], {
+    s = interpolate(frame, [315, 473], [1.65, 2.4], {
       easing: Easing.inOut(Easing.cubic),
       ...CLAMP,
     });
-    px = interpolate(frame, [315, 473], [590, FACE.x], {
-      easing: Easing.inOut(Easing.cubic),
-      ...CLAMP,
-    });
-    py = interpolate(frame, [315, 473], [1000, FACE.y], {
+    px = OX;
+    py = interpolate(frame, [315, 473], [HANDS.y, FACE.y], {
       easing: Easing.inOut(Easing.cubic),
       ...CLAMP,
     });
   }
 
-  const TX = (OX - px) * s;
-  const TY = (OY - py) * s;
+  const TX = OX - px * s;
+  const TY = OY - py * s;
 
   // Posiciones en pantalla de manos y rostro.
   const handSX = (HANDS.x - px) * s + OX;
@@ -360,9 +370,20 @@ export const Scene5ItalyParasite: React.FC = () => {
   const faceSX = (FACE.x - px) * s + OX;
   const faceSY = (FACE.y - py) * s + OY;
 
-  // --- Progresión del paciente (0.2 → 1.0) ----------------------------
-  const mutation = interpolate(frame, [105, 473], [0.2, 1], { ...CLAMP });
-  const panicLevel = interpolate(frame, [105, 473], [0.15, 0.9], { ...CLAMP });
+  // --- Progresión de mutación 0 → 0.35 → 0.78 → 1.0 -------------------
+  const mutation = interpolate(
+    frame,
+    [0, 160, 315, 440],
+    [0, 0.35, 0.78, 1],
+    { ...CLAMP }
+  );
+  // Espasmos crecientes hasta 0.85 en la transformación final.
+  const spasm = interpolate(
+    frame,
+    [0, 160, 315, 440],
+    [0.02, 0.2, 0.55, 0.85],
+    { ...CLAMP }
+  );
 
   // --- Ventanas de micro-beats ---
   const mb1 = interpolate(frame, [0, 10, 96, 105], [0, 1, 1, 0], { ...CLAMP });
@@ -390,9 +411,8 @@ export const Scene5ItalyParasite: React.FC = () => {
 
   const flicker = tubeFlicker(frame);
 
-  // Pulso carmesí del monitor ECG final (315–473).
-  const finalPulse =
-    mb4 * (0.5 + 0.5 * Math.sin(frame * 0.3));
+  // Pulso carmesí del contador MUTACIÓN final (315–473).
+  const finalPulse = mb4 * (0.5 + 0.5 * Math.sin(frame * 0.3));
 
   return (
     <AbsoluteFill style={{ overflow: "hidden", backgroundColor: "#040507" }}>
@@ -404,7 +424,7 @@ export const Scene5ItalyParasite: React.FC = () => {
           transform: `translate(${TX.toFixed(2)}px, ${TY.toFixed(
             2
           )}px) scale(${s.toFixed(4)})`,
-          transformOrigin: "50% 50%",
+          transformOrigin: "0 0",
         }}
       >
         {/* 1. Background clínico */}
@@ -460,23 +480,22 @@ export const Scene5ItalyParasite: React.FC = () => {
           );
         })}
 
-        {/* 4. Paciente mutado */}
-        <WitnessModelRig
-          variant="patient_mutated"
-          width={720}
+        {/* 4. Paciente mutando de cuerpo entero */}
+        <PatientVictimCharacter
           x={540}
-          y={1560}
-          panicLevel={panicLevel}
-          mutationEyeDarkness={mutation}
-          rimColor="rgba(34,211,238,0.52)"
-          showFloorShadow
+          floorY={1520}
+          scale={1.55}
+          mutationProgress={mutation}
+          spasmIntensity={spasm}
+          lookTarget={{ x: 0.1, y: -0.15 }}
+          rimColor="#22D3EE"
         />
       </div>
 
       {/* --- Micro-beat 1: RETAKE MODERNO + ECG --- */}
       <div style={{ opacity: mb1, pointerEvents: "none" }}>
         <ClinicalStamp
-          text="RETAKE MODERNO — BIO-HORROR"
+          text="RETAKE MODERNO // BIO-HORROR"
           top={340}
           color="#F2EFE9"
           scale={stamp1}
@@ -506,12 +525,12 @@ export const Scene5ItalyParasite: React.FC = () => {
       <ClinicalLoupe
         x={handSX}
         y={handSY}
-        r={150}
+        r={140}
         opacity={mb3}
         progress={xrayProgress}
       />
 
-      {/* --- Micro-beat 4: monitor ECG carmesí + transformación --- */}
+      {/* --- Micro-beat 4: contador MUTACIÓN 100% + retícula facial --- */}
       <div style={{ opacity: mb4, pointerEvents: "none" }}>
         <SafeCentered top={340} zIndex={8}>
           <EcgTrace
@@ -538,7 +557,7 @@ export const Scene5ItalyParasite: React.FC = () => {
               border: "1px solid rgba(220,38,38,0.5)",
             }}
           >
-            TRANSFORMATION: <span style={{ color: "#F2EFE9" }}>100%</span>
+            MUTACIÓN: <span style={{ color: "#F2EFE9" }}>100%</span>
           </div>
         </SafeCentered>
       </div>

@@ -2,20 +2,56 @@ import React from "react";
 import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from "remotion";
 
 /**
- * SceneTransitions — Transiciones ancladas a objetos del Estándar v7
+ * SceneTransitions — Transiciones ancladas a objetos del Estándar v8
  * sincronizadas con SCENES (frames globales):
- *  - 177  (Scene 1→2): Barrido de Sombra y Garras (Claw-Swipe Wipe).
- *  - 853  (Scene 2→3): Page-Flip Match-Cut Glow (sombra de hoja + luna fría).
- *  - 1089 (Scene 3→4): Claw-Swipe Wipe (garras arriba-derecha → abajo-izquierda).
- *  - 1605 (Scene 4→5): Waveform Dive-Through (túnel radial cian-carmesí).
- *  - 2078 (Scene 5→6): División Diagonal Luminosa (haz blanco-carmesí-cian).
+ *  - 177  (Scene 1→2): Barrido de Franjas Negras (Media Blackout) → 169–187.
+ *  - 853  (Scene 2→3): Page-Flip Match-Cut (sombra de hoja + luna fría) → 845–863.
+ *  - 1089 (Scene 3→4): Claw-Swipe Wipe (3 zarpazos con filo carmesí) → 1081–1099.
+ *  - 1605 (Scene 4→5): Waveform Dive-Through (anillos + destello cian) → 1595–1617.
+ *  - 2078 (Scene 5→6): División Diagonal Luminosa (blanco/carmesí/cian) → 2070–2090.
  */
 
 const CLAMP = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 
 const WAVE_RINGS = Array.from({ length: 10 }, (_, k) => k);
 
-/** Barrido de sombra y garras con borde rojo sangre. */
+/** Barrido de Franjas Negras (Media Blackout): 6 franjas de censura. */
+const MediaBlackout: React.FC<{ from: number; to: number }> = ({ from, to }) => {
+  const frame = useCurrentFrame();
+  const t = interpolate(frame, [from, to], [0, 1], { ...CLAMP });
+  if (t <= 0 || t >= 1) {
+    return null;
+  }
+  // Cierra (0 → 1) y abre (1 → 0) hacia el archivo de 2003.
+  const cover = interpolate(t, [0, 0.5, 1], [0, 1, 0], { ...CLAMP });
+
+  return (
+    <AbsoluteFill style={{ overflow: "hidden" }}>
+      {Array.from({ length: 6 }).map((_, i) => {
+        const center = i * 320 + 160;
+        const h = cover * 336;
+        return (
+          <div
+            key={i}
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              top: center - h / 2,
+              height: h,
+              background: "#000000",
+              borderTop: "2px solid rgba(220,38,38,0.75)",
+              borderBottom: "2px solid rgba(220,38,38,0.75)",
+              boxShadow: "0 0 22px rgba(0,0,0,0.85)",
+            }}
+          />
+        );
+      })}
+    </AbsoluteFill>
+  );
+};
+
+/** Barrido con garras (Claw-Swipe) con filo carmesí opcional. */
 const ClawSwipe: React.FC<{
   from: number;
   to: number;
@@ -278,7 +314,7 @@ const DiagonalSplit: React.FC<{ from: number; to: number }> = ({ from, to }) => 
 export const SceneTransitions: React.FC = () => {
   return (
     <AbsoluteFill style={{ zIndex: 20, pointerEvents: "none" }}>
-      <ClawSwipe from={169} to={187} direction="trbl" />
+      <MediaBlackout from={169} to={187} />
       <PageFlip from={845} to={863} />
       <ClawSwipe from={1081} to={1099} direction="trbl" crimson />
       <WaveformDive from={1595} to={1617} />
