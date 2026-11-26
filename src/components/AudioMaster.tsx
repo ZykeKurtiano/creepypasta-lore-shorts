@@ -4,19 +4,22 @@ import { TRANSCRIPT_WORDS } from "../data/transcript";
 import { FPS, NARRATION_DURATION_SEC, TOTAL_FRAMES } from "../data/episodeConfig";
 
 /**
- * AudioMaster — Mezcla de audio del episodio:
- *  - narracion.mp3 al volumen 1.0 constante,
- *  - musica_terror.mp3 con ducking: 0.12 con voz activa, subida suave a
- *    0.35 en pausas (>= 0.40s) y en el cierre final (frames 1526–1583),
- *    con fundido limpio a 0.0 en los últimos 18 frames (1565–1583),
- *  - SFX con <Sequence> + <Audio> en cortes e impactos.
+ * AudioMaster — Mezcla de audio del episodio (Estándar v9):
+ *  - narracion.mp3 a volumen constante 1.0.
+ *  - musica_terror.mp3 (piano de Pueblo Lavanda, normalizado a -14 dBFS RMS)
+ *    con ducking suave 0.30 ↔ 0.58: 0.30 con voz activa, subida suave a 0.58
+ *    en pausas dramáticas (>= 0.36 s) y en el cierre final, con fundido
+ *    limpio a 0.0 en los últimos 28 frames (TOTAL_FRAMES - 28 → TOTAL_FRAMES).
+ *  - 4 SFX locales con <Sequence> + <Audio> en arranque, menciones, golpes
+ *    y transiciones.
  */
 
-const MUSIC_VOICE = 0.12;
-const MUSIC_PAUSE = 0.35;
-const MIN_PAUSE_SEC = 0.4;
-const FINAL_FADE_START = 1565;
-const FINAL_FADE_END = 1583;
+const MUSIC_VOICE = 0.3;
+const MUSIC_PAUSE = 0.58;
+const MIN_PAUSE_SEC = 0.36;
+const RAMP_SEC = 0.35;
+const FINAL_FADE_FRAMES = 28;
+const FINAL_FADE_START = TOTAL_FRAMES - FINAL_FADE_FRAMES;
 
 const LAST_WORD_END = TRANSCRIPT_WORDS.reduce(
   (max, w) => Math.max(max, w.end),
@@ -54,8 +57,8 @@ function rawTargetAt(t: number): number {
   }
 
   // Rampas suaves de entrada/salida de la pausa (0.35 s cada una).
-  const into = Math.min(1, (t - gapStart) / 0.35);
-  const out = Math.min(1, (gapEnd - t) / 0.35);
+  const into = Math.min(1, (t - gapStart) / RAMP_SEC);
+  const out = Math.min(1, (gapEnd - t) / RAMP_SEC);
   const k = Math.max(0, Math.min(into, out));
   return MUSIC_VOICE + (MUSIC_PAUSE - MUSIC_VOICE) * k;
 }
@@ -82,7 +85,7 @@ const SMOOTHED_TARGETS: number[] = (() => {
 
 /**
  * Volumen de la música para un frame dado.
- * Ducking 0.12 (voz) ↔ 0.35 (pausas y cierre), fundido final a 0.0.
+ * Ducking 0.30 (voz) ↔ 0.58 (pausas y cierre), fundido final a 0.0.
  */
 export const computeDuckedMusicVolume = (
   frame: number,
@@ -97,13 +100,35 @@ export const computeDuckedMusicVolume = (
   }
   if (f >= FINAL_FADE_START) {
     vol *=
-      interpolate(f, [FINAL_FADE_START, FINAL_FADE_END], [1, 0], {
+      interpolate(f, [FINAL_FADE_START, TOTAL_FRAMES], [1, 0], {
         extrapolateLeft: "clamp",
         extrapolateRight: "clamp",
       });
   }
   return Math.max(0, vol);
 };
+
+/** SFX con sus puntos de disparo exactos (frames globales @ 30 fps). */
+const SFX: Array<{ file: string; at: number; volume: number }> = [
+  // gameboy_chime.mp3 — arranque, mención 1996/Game Boy, apagado de pantalla.
+  { file: "sfx/gameboy_chime.mp3", at: 14, volume: 0.45 },
+  { file: "sfx/gameboy_chime.mp3", at: 230, volume: 0.4 },
+  { file: "sfx/gameboy_chime.mp3", at: 2095, volume: 0.34 },
+
+  // deep_boom.mp3 — golpes de revelación y transiciones.
+  { file: "sfx/deep_boom.mp3", at: 516, volume: 0.52 },
+  { file: "sfx/deep_boom.mp3", at: 554, volume: 0.42 },
+  { file: "sfx/deep_boom.mp3", at: 942, volume: 0.46 },
+  { file: "sfx/deep_boom.mp3", at: 1510, volume: 0.48 },
+  { file: "sfx/deep_boom.mp3", at: 2143, volume: 0.52 },
+
+  // binaural_ring.mp3 — frecuencias agudas/binaurales.
+  { file: "sfx/binaural_ring.mp3", at: 1082, volume: 0.44 },
+  { file: "sfx/binaural_ring.mp3", at: 1750, volume: 0.3 },
+
+  // glitch_731.mp3 — interferencia del Código 731.
+  { file: "sfx/glitch_731.mp3", at: 1348, volume: 0.5 },
+];
 
 export const AudioMaster: React.FC = () => {
   return (
@@ -117,38 +142,12 @@ export const AudioMaster: React.FC = () => {
         volume={(f) => computeDuckedMusicVolume(f)}
       />
 
-      {/* SFX: flash de cámara */}
-      <Sequence from={136}>
-        <Audio src={staticFile("sfx/camera_flash.mp3")} volume={0.58} />
-      </Sequence>
-      <Sequence from={258}>
-        <Audio src={staticFile("sfx/camera_flash.mp3")} volume={0.38} />
-      </Sequence>
-      <Sequence from={1346}>
-        <Audio src={staticFile("sfx/camera_flash.mp3")} volume={0.48} />
-      </Sequence>
-
-      {/* SFX: estática VHS en cortes de acto */}
-      <Sequence from={486}>
-        <Audio src={staticFile("sfx/vhs_glitch.mp3")} volume={0.42} />
-      </Sequence>
-      <Sequence from={844}>
-        <Audio src={staticFile("sfx/vhs_glitch.mp3")} volume={0.36} />
-      </Sequence>
-      <Sequence from={1110}>
-        <Audio src={staticFile("sfx/vhs_glitch.mp3")} volume={0.42} />
-      </Sequence>
-
-      {/* SFX: golpe subgrave en revelaciones clave */}
-      <Sequence from={422}>
-        <Audio src={staticFile("sfx/deep_growl_boom.mp3")} volume={0.45} />
-      </Sequence>
-      <Sequence from={1272}>
-        <Audio src={staticFile("sfx/deep_growl_boom.mp3")} volume={0.58} />
-      </Sequence>
-      <Sequence from={1462}>
-        <Audio src={staticFile("sfx/deep_growl_boom.mp3")} volume={0.62} />
-      </Sequence>
+      {/* SFX diegéticos anclados a cortes e impactos */}
+      {SFX.map((sfx, i) => (
+        <Sequence key={i} from={sfx.at}>
+          <Audio src={staticFile(sfx.file)} volume={sfx.volume} />
+        </Sequence>
+      ))}
     </>
   );
 };

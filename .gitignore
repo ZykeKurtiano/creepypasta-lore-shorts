@@ -3,6 +3,8 @@ node_modules/
 
 # Preview & temporary renders
 .preview/
+.prompts/
+public/musica_lavanda_raw.mp3
 *.mp4
 *.tmp
 *.bak

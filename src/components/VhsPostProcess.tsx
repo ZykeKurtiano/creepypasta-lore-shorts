@@ -1,20 +1,16 @@
 import React from "react";
-import {
-  AbsoluteFill,
-  interpolate,
-  useCurrentFrame,
-} from "remotion";
+import { AbsoluteFill, interpolate, useCurrentFrame } from "remotion";
 import { FONT_MONO } from "./SafeZone";
 
 /**
- * VhsPostProcess — Post-procesado analógico estilo cinta VHS:
+ * VhsPostProcess — Post-procesado analógico estilo cinta VHS (Estándar v9):
  *  - grano de película ULTRA-fino y sutil (SVG feTurbulence fractalNoise,
- *    animado por seed determinista, opacity 0.055 — jamás lava los negros),
- *  - líneas de escaneo estrictamente horizontales (opacity 0.075,
- *    sin moiré vertical),
- *  - viñeta radial limpia en bordes,
- *  - aberración cromática SOLO en picos de tensión (cortes y flashes),
- *  - HUD diegético mínimo (● REC + timecode) dentro de la zona segura.
+ *    animado por seed determinista, opacity 0.042 — jamás lava los negros),
+ *  - líneas de escaneo estrictamente horizontales (opacity 0.055),
+ *  - viñeta radial perimetral limpia sin ensuciar el trazo vectorial,
+ *  - aberración cromática SOLO en picos y cortes (frames globales),
+ *  - HUD diegético minimalista (● REC + timecode + CH-047 // LAVENDER)
+ *    en top: 296, centrado, dentro de la zona segura.
  */
 
 const GrainLayer: React.FC = () => {
@@ -23,7 +19,12 @@ const GrainLayer: React.FC = () => {
     <svg
       width="100%"
       height="100%"
-      style={{ position: "absolute", inset: 0, opacity: 0.055, pointerEvents: "none" }}
+      style={{
+        position: "absolute",
+        inset: 0,
+        opacity: 0.042,
+        pointerEvents: "none",
+      }}
     >
       <defs>
         <filter id="vhs-grain" x="0%" y="0%" width="100%" height="100%">
@@ -43,46 +44,35 @@ const GrainLayer: React.FC = () => {
   );
 };
 
-/** Eventos que disparan picos de aberración cromática. */
-const CHROMA_EVENTS: Array<{ at: number; strength: number }> = [
-  { at: 138, strength: 1 },
-  { at: 260, strength: 0.6 },
-  { at: 489, strength: 0.85 },
-  { at: 846, strength: 0.8 },
-  { at: 1113, strength: 0.85 },
-  { at: 1347, strength: 1 },
-];
+/** Frames que disparan picos breves de aberración cromática. */
+const CHROMA_FRAMES = [230, 520, 556, 945, 1082, 1354, 1512, 1919, 2145];
 
 const pad = (n: number): string => String(n).padStart(2, "0");
 
 export const VhsPostProcess: React.FC = () => {
   const frame = useCurrentFrame();
 
-  // Intensidad de aberración cromática actual (solo en picos).
+  // Intensidad de aberración cromática actual (solo en picos/cortes).
   let chroma = 0;
-  for (const ev of CHROMA_EVENTS) {
-    const d = frame - ev.at;
-    if (d >= 0 && d <= 18) {
-      const s =
-        ev.strength *
-        interpolate(d, [0, 3, 9, 18], [0, 1, 0.55, 0], {
-          extrapolateLeft: "clamp",
-          extrapolateRight: "clamp",
-        });
+  for (const at of CHROMA_FRAMES) {
+    const d = frame - at;
+    if (d >= 0 && d <= 16) {
+      const s = interpolate(d, [0, 3, 8, 16], [0, 1, 0.55, 0], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      });
       chroma = Math.max(chroma, s);
     }
   }
 
   // Timecode HH:MM:SS:FF.
   const totalSec = Math.floor(frame / 30);
-  const mm = Math.floor(totalSec / 60);
+  const hh = Math.floor(totalSec / 3600);
+  const mm = Math.floor((totalSec % 3600) / 60);
   const ss = totalSec % 60;
   const ff = frame % 30;
-  const timecode = `00:00:${pad(mm)}:${pad(ss)}:${pad(ff)}`;
+  const timecode = `${pad(hh)}:${pad(mm)}:${pad(ss)}:${pad(ff)}`;
   const recBlink = Math.floor(frame / 9) % 2 === 0 ? 1 : 0.28;
-
-  // Línea de tracking que rueda muy lentamente (sutil).
-  const rollY = (frame * 0.55) % 1920;
 
   return (
     <AbsoluteFill style={{ zIndex: 60, pointerEvents: "none" }}>
@@ -94,20 +84,7 @@ export const VhsPostProcess: React.FC = () => {
         style={{
           background:
             "repeating-linear-gradient(to bottom, rgba(0,0,0,0.3) 0px, rgba(0,0,0,0.3) 1px, transparent 1px, transparent 3px)",
-          opacity: 0.075,
-        }}
-      />
-
-      {/* Banda de interferencia rodante (muy tenue) */}
-      <div
-        style={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          top: rollY - 120,
-          height: 120,
-          background:
-            "linear-gradient(to bottom, transparent, rgba(190,220,240,0.035), transparent)",
+          opacity: 0.055,
         }}
       />
 
@@ -115,7 +92,7 @@ export const VhsPostProcess: React.FC = () => {
       <AbsoluteFill
         style={{
           background:
-            "radial-gradient(ellipse at center, transparent 52%, rgba(2,3,5,0.5) 86%, rgba(0,0,0,0.92) 100%)",
+            "radial-gradient(ellipse at center, transparent 56%, rgba(2,3,5,0.42) 88%, rgba(0,0,0,0.88) 100%)",
         }}
       />
 
@@ -167,7 +144,7 @@ export const VhsPostProcess: React.FC = () => {
         </AbsoluteFill>
       ) : null}
 
-      {/* HUD diegético mínimo: ● REC + timecode (zona segura, top 296) */}
+      {/* HUD diegético mínimo: ● REC + timecode + CH-047 // LAVENDER */}
       <div
         style={{
           position: "absolute",
@@ -196,7 +173,9 @@ export const VhsPostProcess: React.FC = () => {
           <span style={{ color: "#DC2626", opacity: recBlink }}>●</span>
           <span style={{ opacity: 0.75 }}> REC&nbsp;&nbsp;</span>
           <span>{timecode}</span>
-          <span style={{ opacity: 0.55 }}>&nbsp;&nbsp;SP&nbsp;//&nbsp;SMILE.JPG</span>
+          <span style={{ color: "#A78BFA", opacity: 0.7 }}>
+            &nbsp;&nbsp;CH-047&nbsp;//&nbsp;LAVENDER
+          </span>
         </div>
       </div>
     </AbsoluteFill>

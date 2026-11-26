@@ -1,133 +1,306 @@
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import {
   AbsoluteFill,
+  Easing,
   interpolate,
-  random,
   useCurrentFrame,
 } from "remotion";
-import { flashEnvelope } from "./Camera25D";
+import { FONT_MONO } from "./SafeZone";
 
 /**
- * SceneTransitions — Transiciones dinámicas entre escenas (frames globales):
- *  - frame 138 y 260: estallido de flash de cámara vintage + postimagen fría
- *    con división cromática.
- *  - frame 489: desgarro de tracking VHS + ráfaga de estática (12 frames).
- *  - frame 846: barrido horizontal whip-pan (streak de motion blur, 10 frames;
- *    el deslizamiento translateX real lo aplica MainComposition).
- *  - frame 1113: whip-pan + interferencia VHS (12 frames).
- *  - frame 1347: apagón duro / destello carmesí hacia el close-up final.
+ * SceneTransitions — Transiciones limpias ancladas a objetos (Estándar v9),
+ * exactamente en las 5 fronteras de `SCENES` (frames globales):
+ *
+ *  - 556  (Escena 1 → 2) Screen-Dive Zoom: zoom inmersivo entrando en el marco
+ *         verde-negro #84CC16/#040507 de la pantalla de Game Boy (16 frames).
+ *  - 1082 (Escena 2 → 3) Barrido de onda sonora violeta #A78BFA/#C084FC
+ *         horizontal con estela suave (14 frames).
+ *  - 1512 (Escena 3 → 4) Carpetazo / Page-Flip: barrido rígido tipo expediente
+ *         con borde iluminado girando hacia el Archivo 047 (14 frames).
+ *  - 1919 (Escena 4 → 5) Zoom-Out suave apagando consola: colapso horizontal
+ *         a un punto blanco-lavanda y fundido al cuarto oscuro (14 frames).
+ *  - 2145 (Escena 5 → 6) Divisor diagonal violeta/índigo #A78BFA/#4F46E5 que
+ *         corta el encuadre y abre la pantalla dividida final (16 frames).
  */
 
-const TearStatic: React.FC<{ opacity: number }> = ({ opacity }) => {
-  const frame = useCurrentFrame();
-  const ref = useRef<HTMLCanvasElement | null>(null);
+/** Progreso 0→1 de una transición de `dur` frames centrada en `center`. */
+const windowProgress = (
+  frame: number,
+  center: number,
+  dur: number
+): number =>
+  interpolate(frame, [center - dur / 2, center + dur / 2], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
 
-  useEffect(() => {
-    const canvas = ref.current;
-    if (!canvas) {
-      return;
-    }
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      return;
-    }
-    const w = 96;
-    const h = 160;
-    const img = ctx.createImageData(w, h);
-    const tearY = 50 + Math.round((frame * 13) % 90);
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const g = random(frame * 77 + y * w + x);
-        const v = g > 0.5 ? 235 : 18;
-        const shift =
-          y > tearY ? Math.round((random(frame * 3 + y * 5) - 0.5) * 16) : 0;
-        const sx = (x + shift + w) % w;
-        const idx = (y * w + sx) * 4;
-        img.data[idx] = v;
-        img.data[idx + 1] = v;
-        img.data[idx + 2] = v;
-        img.data[idx + 3] = g > 0.5 ? 210 : 95;
-      }
-    }
-    ctx.putImageData(img, 0, 0);
-  }, [frame]);
-
+const ScreenDive: React.FC<{ p: number }> = ({ p }) => {
+  // El marco de la pantalla crece hasta tragarse la cámara.
+  const scale = interpolate(p, [0, 1], [0.22, 3.2], {
+    easing: Easing.in(Easing.cubic),
+  });
+  const black = interpolate(p, [0.05, 0.55], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
   return (
-    <canvas
-      ref={ref}
-      width={96}
-      height={160}
-      style={{
-        position: "absolute",
-        inset: 0,
-        width: "100%",
-        height: "100%",
-        imageRendering: "pixelated",
-        opacity,
-        mixBlendMode: "screen",
-      }}
-    />
+    <AbsoluteFill style={{ overflow: "hidden" }}>
+      {/* Fondo que se apaga hacia el interior de la pantalla */}
+      <AbsoluteFill style={{ background: "#040507", opacity: black }} />
+      {/* Marco verde-negro de la pantalla de Game Boy */}
+      <div
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: "50%",
+          width: 420,
+          height: 320,
+          transform: `translate(-50%, -50%) scale(${scale})`,
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "#040507",
+            border: "12px solid #84CC16",
+            borderRadius: 18,
+            boxShadow: "0 0 120px rgba(132,204,22,0.65), inset 0 0 80px rgba(132,204,22,0.25)",
+          }}
+        />
+        {/* Rejilla retro 8-bit del interior */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 24,
+            background:
+              "repeating-linear-gradient(to bottom, rgba(132,204,22,0.16) 0 2px, transparent 2px 12px), repeating-linear-gradient(to right, rgba(132,204,22,0.12) 0 2px, transparent 2px 12px)",
+          }}
+        />
+      </div>
+    </AbsoluteFill>
   );
 };
 
-const WhipStreak: React.FC<{ from: number; len: number; opacity: number }> = ({
-  from,
-  len,
-  opacity,
-}) => {
-  const frame = useCurrentFrame();
-  const bars = [0, 1, 2, 3, 4, 5, 6];
+const WaveSweep: React.FC<{ p: number }> = ({ p }) => {
+  // Barrido de onda sonora violeta con estela.
+  const crests = [0, 1, 2, 3, 4];
+  const leadX = interpolate(p, [0, 1], [-120, 1160], {
+    easing: Easing.inOut(Easing.quad),
+  });
   return (
-    <AbsoluteFill style={{ overflow: "hidden" }}>
-      {bars.map((k) => {
-        const x = interpolate(
-          frame,
-          [from, from + len],
-          [-240 + k * 96, 1080 + k * 46],
-          { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-        );
+    <AbsoluteFill style={{ overflow: "hidden", mixBlendMode: "screen" }}>
+      {crests.map((k) => {
+        const x = interpolate(p, [0, 1], [-260 + k * 120, 1080 + k * 60], {
+          easing: Easing.inOut(Easing.quad),
+        });
         return (
           <div
             key={k}
             style={{
               position: "absolute",
-              top: -60,
+              top: -80,
               left: x,
-              width: 66 + k * 26,
-              height: 2040,
+              width: 90 + k * 30,
+              height: 2080,
               background:
-                "linear-gradient(90deg, transparent, rgba(214,238,255,0.16), transparent)",
-              filter: "blur(6px)",
-              opacity,
+                "linear-gradient(90deg, transparent, rgba(192,132,252,0.34), transparent)",
+              filter: "blur(12px)",
             }}
           />
         );
       })}
-      {/* Borde luminoso del barrido */}
+      {/* Borde luminoso de la onda */}
       <div
         style={{
           position: "absolute",
           top: 0,
-          left: interpolate(frame, [from, from + len], [-60, 1120], {
-            extrapolateLeft: "clamp",
-            extrapolateRight: "clamp",
-          }),
-          width: 5,
+          left: leadX,
+          width: 6,
           height: 1920,
           background:
-            "linear-gradient(180deg, transparent, rgba(240,248,255,0.9), transparent)",
+            "linear-gradient(180deg, transparent, #A78BFA, #C084FC, transparent)",
+          boxShadow: "0 0 42px rgba(167,139,250,0.95)",
           filter: "blur(1px)",
-          opacity: opacity * 0.9,
         }}
       />
-      {/* Oscurecimiento direccional */}
+    </AbsoluteFill>
+  );
+};
+
+const PageFlip: React.FC<{ p: number }> = ({ p }) => {
+  // Barrido rígido tipo expediente con borde iluminado + sello Archivo 047.
+  const x = interpolate(p, [0, 1], [-140, 1160], {
+    easing: Easing.inOut(Easing.cubic),
+  });
+  const stamp = interpolate(p, [0.45, 0.72], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  return (
+    <AbsoluteFill style={{ overflow: "hidden" }}>
+      {/* Página rígida del expediente */}
       <div
         style={{
           position: "absolute",
-          inset: 0,
+          top: 0,
+          left: x,
+          width: 460,
+          height: 1920,
+          background: "linear-gradient(90deg, #0B0A18, #171426 60%, #0B0A18)",
+          transform: "skewY(-2deg)",
+          boxShadow: "0 0 80px rgba(0,0,0,0.85)",
+        }}
+      />
+      {/* Borde iluminado que gira */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: x + 452,
+          width: 14,
+          height: 1920,
+          background: "linear-gradient(180deg, transparent, #A78BFA, transparent)",
+          boxShadow: "0 0 46px rgba(167,139,250,0.9)",
+        }}
+      />
+      {/* Sello cinético ARCHIVO 047 */}
+      {stamp > 0.01 ? (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            display: "flex",
+            justifyContent: "center",
+            paddingTop: 640,
+            opacity: stamp,
+            transform: `scale(${0.9 + stamp * 0.1})`,
+          }}
+        >
+          <div
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 44,
+              fontWeight: 800,
+              letterSpacing: 8,
+              color: "#F2EFE9",
+              border: "3px solid #DC2626",
+              padding: "14px 34px",
+              transform: "rotate(-3deg)",
+              background: "rgba(4,5,7,0.72)",
+              boxShadow: "0 0 40px rgba(220,38,38,0.35)",
+            }}
+          >
+            ARCHIVO 047
+          </div>
+        </div>
+      ) : null}
+    </AbsoluteFill>
+  );
+};
+
+const ConsoleOff: React.FC<{ p: number }> = ({ p }) => {
+  // Colapso horizontal a un punto blanco-lavanda y fundido al cuarto oscuro.
+  const converge = interpolate(p, [0, 0.55], [0, 1], {
+    easing: Easing.in(Easing.cubic),
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const lineGlow = interpolate(p, [0.4, 0.62, 0.8], [0, 1, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const blackout = interpolate(p, [0.62, 1], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const barTop = converge * 905;
+  return (
+    <AbsoluteFill style={{ overflow: "hidden" }}>
+      {/* Barras negras que convergen al centro */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          top: 0,
+          height: barTop,
+          background: "#020306",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: barTop,
+          background: "#020306",
+        }}
+      />
+      {/* Línea blanca-lavanda de la pantalla que se apaga */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          top: 958,
+          height: 4,
           background:
-            "linear-gradient(90deg, rgba(2,3,5,0.5), transparent 35%, transparent 65%, rgba(2,3,5,0.5))",
-          opacity,
+            "linear-gradient(90deg, transparent, #EDE9FE, #A78BFA, transparent)",
+          boxShadow: "0 0 60px rgba(167,139,250,0.95)",
+          opacity: lineGlow,
+        }}
+      />
+      {/* Fundido al cuarto oscuro */}
+      <AbsoluteFill style={{ background: "#040507", opacity: blackout }} />
+    </AbsoluteFill>
+  );
+};
+
+const DiagonalDivider: React.FC<{ p: number }> = ({ p }) => {
+  // Haz diagonal que corta el encuadre y abre la pantalla dividida.
+  const t = interpolate(p, [0, 1], [-0.5, 1.5], {
+    easing: Easing.inOut(Easing.quad),
+  });
+  // Línea que recorre de esquina inferior-izquierda a superior-derecha.
+  const x0 = -300;
+  const y0 = 1620;
+  const x1 = 1380;
+  const y1 = 300;
+  const bx = x0 + (x1 - x0) * t;
+  const by = y0 + (y1 - y0) * t;
+  return (
+    <AbsoluteFill style={{ overflow: "hidden", mixBlendMode: "screen" }}>
+      {/* Estela diagonal */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          top: 0,
+          bottom: 0,
+          background:
+            "linear-gradient(115deg, transparent 42%, rgba(167,139,250,0.28) 50%, rgba(79,70,229,0.28) 58%, transparent 66%)",
+          opacity: interpolate(p, [0, 1], [0, 1]),
+        }}
+      />
+      {/* Haz principal móvil */}
+      <div
+        style={{
+          position: "absolute",
+          width: 30,
+          height: 2600,
+          left: bx - 15,
+          top: by - 1300,
+          background:
+            "linear-gradient(180deg, transparent, #A78BFA, #4F46E5, transparent)",
+          transform: "rotate(45deg)",
+          transformOrigin: "center",
+          boxShadow: "0 0 70px rgba(167,139,250,0.9)",
+          filter: "blur(1px)",
         }}
       />
     </AbsoluteFill>
@@ -137,182 +310,19 @@ const WhipStreak: React.FC<{ from: number; len: number; opacity: number }> = ({
 export const SceneTransitions: React.FC = () => {
   const frame = useCurrentFrame();
 
-  // --- Destellos de cámara dentro de la escena 1 ---
-  const flash1 = flashEnvelope(frame, 138, 24, 1);
-  const flash1After =
-    frame >= 144 && frame <= 185
-      ? interpolate(frame, [144, 185], [0.26, 0])
-      : 0;
-  const flash2 = flashEnvelope(frame, 260, 17, 0.6);
-  const flash2After =
-    frame >= 266 && frame <= 296
-      ? interpolate(frame, [266, 296], [0.16, 0])
-      : 0;
-  const coldAfter = Math.max(flash1After, flash2After);
-
-  // --- Desgarro VHS (Scene 1 → 2) ---
-  const tear489 = interpolate(frame, [487, 489, 495, 497], [0, 1, 1, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-
-  // --- Whip-pan (Scene 2 → 3) ---
-  const whip846 = interpolate(frame, [846, 850, 854, 856], [0, 0.95, 0.5, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-
-  // --- Whip-pan + glitch (Scene 3 → 4) ---
-  const whip1113 = interpolate(
-    frame,
-    [1113, 1117, 1121, 1125],
-    [0, 0.9, 0.55, 0],
-    {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-    }
-  );
-  const tear1113 = interpolate(frame, [1111, 1113, 1119, 1121], [0, 1, 1, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-
-  // --- Apagón duro / destello carmesí (Scene 4 → 5) ---
-  // (Guardas de rango explícitas: extrapolateLeft clamp filtraría estos
-  // valores sobre TODOS los frames anteriores.)
-  const black =
-    frame >= 1346 && frame <= 1352
-      ? interpolate(frame, [1346, 1348, 1352], [1, 0.7, 0])
-      : 0;
-  const whiteSnap =
-    frame >= 1347 && frame <= 1349
-      ? interpolate(frame, [1347, 1348, 1349], [0.75, 1, 0])
-      : 0;
-  const crimson =
-    frame >= 1348 && frame <= 1355
-      ? interpolate(frame, [1348, 1351, 1355], [0.85, 0.4, 0])
-      : 0;
-
-  const flashTotal = Math.max(flash1, flash2) + flash1After * 0.5;
+  const p556 = windowProgress(frame, 556, 16);
+  const p1082 = windowProgress(frame, 1082, 14);
+  const p1512 = windowProgress(frame, 1512, 14);
+  const p1919 = windowProgress(frame, 1919, 14);
+  const p2145 = windowProgress(frame, 2145, 16);
 
   return (
     <AbsoluteFill style={{ zIndex: 20, pointerEvents: "none" }}>
-      {/* Flash cámara 1 (smile.jpg) */}
-      {flash1 > 0.004 ? (
-        <AbsoluteFill style={{ background: "#F7FAFD", opacity: flash1 }} />
-      ) : null}
-      {/* Flash cámara 2 (flash) */}
-      {flash2 > 0.004 ? (
-        <AbsoluteFill style={{ background: "#EDF2F8", opacity: flash2 }} />
-      ) : null}
-      {/* Postimagen fría + división cromática */}
-      {coldAfter > 0.004 ? (
-        <AbsoluteFill>
-          <AbsoluteFill
-            style={{ background: "#B9D4EC", opacity: coldAfter }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              top: 0,
-              bottom: 0,
-              left: 0,
-              width: 44,
-              background: "rgba(34,211,238,0.5)",
-              opacity: coldAfter,
-            }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              top: 0,
-              bottom: 0,
-              right: 0,
-              width: 44,
-              background: "rgba(244,63,94,0.5)",
-              opacity: coldAfter,
-            }}
-          />
-        </AbsoluteFill>
-      ) : null}
-
-      {/* Desgarro VHS 489 */}
-      {tear489 > 0.004 ? <TearStatic opacity={tear489} /> : null}
-      {tear489 > 0.004 ? (
-        <div
-          style={{
-            position: "absolute",
-            left: 0,
-            right: 0,
-            top: interpolate(frame, [489, 501], [820, 700], {
-              extrapolateLeft: "clamp",
-              extrapolateRight: "clamp",
-            }),
-            height: 3,
-            background: "rgba(230,244,255,0.8)",
-            boxShadow: "0 0 18px rgba(34,211,238,0.8)",
-            opacity: tear489,
-          }}
-        />
-      ) : null}
-
-      {/* Whip-pan 846 */}
-      {whip846 > 0.004 ? (
-        <WhipStreak from={846} len={10} opacity={whip846} />
-      ) : null}
-
-      {/* Whip-pan + glitch 1113 */}
-      {whip1113 > 0.004 ? (
-        <WhipStreak from={1113} len={12} opacity={whip1113} />
-      ) : null}
-      {tear1113 > 0.004 ? <TearStatic opacity={tear1113 * 0.9} /> : null}
-
-      {/* Apagón duro + destello carmesí 1347 */}
-      {black > 0.004 ? (
-        <AbsoluteFill style={{ background: "#000000", opacity: black }} />
-      ) : null}
-      {whiteSnap > 0.004 ? (
-        <AbsoluteFill
-          style={{ background: "#FFFFFF", opacity: whiteSnap }}
-        />
-      ) : null}
-      {crimson > 0.004 ? (
-        <AbsoluteFill style={{ background: "#7F1D1D", opacity: crimson }} />
-      ) : null}
-
-      {/* División cromática global en picos de tensión (flash 1) */}
-      {flashTotal > 0.02 ? (
-        <AbsoluteFill style={{ mixBlendMode: "screen" }}>
-          <div
-            style={{
-              position: "absolute",
-              top: 0,
-              bottom: 0,
-              left: 0,
-              width: interpolate(flashTotal, [0, 1], [0, 34], {
-                extrapolateLeft: "clamp",
-                extrapolateRight: "clamp",
-              }),
-              background: "rgba(34,211,238,0.35)",
-              opacity: Math.min(1, flashTotal),
-            }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              top: 0,
-              bottom: 0,
-              right: 0,
-              width: interpolate(flashTotal, [0, 1], [0, 34], {
-                extrapolateLeft: "clamp",
-                extrapolateRight: "clamp",
-              }),
-              background: "rgba(244,63,94,0.35)",
-              opacity: Math.min(1, flashTotal),
-            }}
-          />
-        </AbsoluteFill>
-      ) : null}
+      {p556 > 0 && p556 < 1 ? <ScreenDive p={p556} /> : null}
+      {p1082 > 0 && p1082 < 1 ? <WaveSweep p={p1082} /> : null}
+      {p1512 > 0 && p1512 < 1 ? <PageFlip p={p1512} /> : null}
+      {p1919 > 0 && p1919 < 1 ? <ConsoleOff p={p1919} /> : null}
+      {p2145 > 0 && p2145 < 1 ? <DiagonalDivider p={p2145} /> : null}
     </AbsoluteFill>
   );
 };
